@@ -3,7 +3,7 @@
  * Ponto de entrada principal.
  */
 
-import { ShopApplication } from './shop-app.js';
+import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache } from './shop-app.js';
 import { ShopSettingsApplication } from './settings-app.js';
 
 export const MODULE_ID = 'loja-t20';
@@ -41,7 +41,8 @@ Hooks.once('init', () => {
     scope: 'world',
     config: true,
     type: Boolean,
-    default: true
+    default: true,
+    onChange: () => warmShopItemsCache()
   });
 
   // Se deve incluir itens do mundo (World Items)
@@ -51,7 +52,8 @@ Hooks.once('init', () => {
     scope: 'world',
     config: true,
     type: Boolean,
-    default: true
+    default: true,
+    onChange: () => warmShopItemsCache()
   });
 
   // Mensagens de compra/venda no chat
@@ -104,7 +106,27 @@ Hooks.once('init', () => {
 });
 
 /* ─────────────────────────────────────────────
-   READY — Injeta botão nas fichas de personagem
+   READY — Pré-carrega os itens da loja
+───────────────────────────────────────────── */
+Hooks.once('ready', () => {
+  // Não bloqueia o carregamento do mundo: aquece o cache em segundo plano
+  // para que a primeira abertura da loja seja instantânea.
+  warmShopItemsCache();
+});
+
+// Invalida (e reaquece) o cache quando itens do mundo são alterados.
+// Itens embutidos (em fichas) e de compêndio não afetam a lista da loja.
+const onWorldItemChange = item => {
+  if (item?.isEmbedded || item?.pack) return;
+  invalidateShopItemsCache();
+  warmShopItemsCache();
+};
+Hooks.on('createItem', onWorldItemChange);
+Hooks.on('updateItem', onWorldItemChange);
+Hooks.on('deleteItem', onWorldItemChange);
+
+/* ─────────────────────────────────────────────
+   Injeta botão nas fichas de personagem
 ───────────────────────────────────────────── */
 Hooks.on('renderActorSheet', (app, html, _data) => {
   const actor = app.actor;

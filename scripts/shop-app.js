@@ -225,6 +225,172 @@ function precoDisplay(silverPrice) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Cache compartilhado de itens
+   ─────────────────────────────────────────────────────────────
+   Carregar os compêndios (pack.getDocuments) é a operação cara.
+   Em vez de refazer isso a cada abertura da loja, formatamos os
+   itens uma única vez e reutilizamos o resultado em todas as
+   janelas. O cache é pré-aquecido no boot do Foundry (hook ready)
+   e invalidado automaticamente quando as fontes mudam.
+───────────────────────────────────────────────────────────── */
+const ItemCache = {
+  /** @type {ShopItem[]|null} Itens já formatados (null = não carregado) */
+  items      : null,
+  /** Fingerprint das settings que definem o conteúdo da loja */
+  fingerprint: null,
+  /** @type {Promise<ShopItem[]>|null} Build em andamento */
+  building   : null,
+};
+
+/** Identifica as configurações que afetam o conteúdo da loja. */
+function shopSettingsFingerprint() {
+  return JSON.stringify({
+    world : game.settings.get(MODULE_ID, 'includeWorldItems'),
+    system: game.settings.get(MODULE_ID, 'includeSystemPacks'),
+    packs : game.settings.get(MODULE_ID, 'extraCompendiums') || [],
+    items : game.settings.get(MODULE_ID, 'extraItems') || [],
+  });
+}
+
+/** Indica se há um cache válido pronto para uso imediato. */
+export function shopItemsCacheReady() {
+  return !!ItemCache.items && ItemCache.fingerprint === shopSettingsFingerprint();
+}
+
+/** Formata um documento Item para o formato interno da loja. */
+function formatItem(doc) {
+  const preco = Number(doc.system?.preco) || 0;
+  const espacosBase = Number(doc.system?.espacos) || 0;
+  const qtd = Number(doc.system?.qtd) || 1;
+  const espacos = espacosBase * qtd;
+  const filterTags = buildFilterTags(doc);
+  return {
+    uuid        : doc.uuid,
+    name        : doc.name,
+    img         : doc.img ?? 'icons/svg/item-bag.svg',
+    type        : doc.type,
+    typeLabel   : typeLabel(doc.type),
+    preco,
+    precoDisplay: precoDisplay(preco),
+    espacos,
+    filterTags,
+    source      : doc.system?.source ?? '',
+  };
+}
+
+/** Carrega e formata todos os itens das fontes configuradas. */
+async function buildShopItems() {
+  const items = [];
+  const seen  = new Set();   // evita duplicatas por UUID
+
+  const addItem = (doc) => {
+    if (!doc) return;
+    const preco = doc.system?.preco;
+    if (preco === undefined || preco === null || preco === '' || Number(preco) <= 0) return;
+    const uuid = doc.uuid ?? doc.id;
+    if (seen.has(uuid)) return;
+    seen.add(uuid);
+    items.push(formatItem(doc));
+  };
+
+  // 1. Itens do mundo (já estão em memória)
+  if (game.settings.get(MODULE_ID, 'includeWorldItems')) {
+    for (const item of game.items) addItem(item);
+  }
+
+  // 2 + 3. Compêndios do sistema e configurados — carregados em paralelo
+  const packs = [];
+  if (game.settings.get(MODULE_ID, 'includeSystemPacks')) {
+    for (const pack of game.packs) {
+      if (pack.documentName === 'Item' &&
+          (pack.metadata.packageType === 'system' || pack.metadata.packageName === game.system.id)) {
+        packs.push(pack);
+      }
+    }
+  }
+  const extraPacks = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
+  for (const packId of extraPacks) {
+    const pack = game.packs.get(packId);
+    if (!pack || pack.documentName !== 'Item') {
+      console.warn(`${MODULE_ID} | Compêndio inválido ou não é de Itens: ${packId}`);
+      continue;
+    }
+    if (!packs.includes(pack)) packs.push(pack);
+  }
+
+  const packResults = await Promise.all(packs.map(async pack => {
+    try {
+      return await pack.getDocuments();
+    } catch (e) {
+      console.warn(`${MODULE_ID} | Erro ao carregar compêndio ${pack.collection}`, e);
+      return [];
+    }
+  }));
+  for (const docs of packResults) {
+    for (const doc of docs) addItem(doc);
+  }
+
+  // 4. Itens individuais por UUID — também em paralelo
+  const extraItems = game.settings.get(MODULE_ID, 'extraItems') || [];
+  const extraDocs = await Promise.all(extraItems.map(async uuid => {
+    try {
+      return await fromUuid(uuid);
+    } catch (e) {
+      console.warn(`${MODULE_ID} | UUID inválido: ${uuid}`, e);
+      return null;
+    }
+  }));
+  for (const doc of extraDocs) addItem(doc);
+
+  return items;
+}
+
+/**
+ * Retorna os itens da loja, usando o cache quando possível.
+ * @param {{force?: boolean}} [opts]
+ * @returns {Promise<ShopItem[]>}
+ */
+export async function getShopItems({ force = false } = {}) {
+  const fingerprint = shopSettingsFingerprint();
+
+  if (!force && ItemCache.items && ItemCache.fingerprint === fingerprint) {
+    return ItemCache.items;
+  }
+  if (ItemCache.building) return ItemCache.building;
+
+  ItemCache.building = (async () => {
+    try {
+      const items = await buildShopItems();
+      ItemCache.items       = items;
+      ItemCache.fingerprint = fingerprint;
+      return items;
+    } finally {
+      ItemCache.building = null;
+    }
+  })();
+
+  return ItemCache.building;
+}
+
+/** Invalida o cache, forçando recarga na próxima requisição. */
+export function invalidateShopItemsCache() {
+  ItemCache.items       = null;
+  ItemCache.fingerprint = null;
+}
+
+/**
+ * Pré-aquece o cache (chamado no boot e após mudanças de fonte) para
+ * que a primeira abertura da loja seja instantânea.
+ */
+export async function warmShopItemsCache() {
+  try {
+    await getShopItems({ force: true });
+  } catch (e) {
+    console.warn(`${MODULE_ID} | Falha ao pré-carregar itens da loja`, e);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    ShopApplication
 ───────────────────────────────────────────────────────────── */
 export class ShopApplication extends Application {
@@ -251,6 +417,8 @@ export class ShopApplication extends Application {
     this._sideFilterScroll = 0;
     this._cartItems = new Map();
     this._cartApp = null;
+    /** @type {number|null} Timer de debounce da busca */
+    this._searchTimer = null;
 
     this._actorUpdateHook = Hooks.on('updateActor', (updatedActor, data) => {
       if (!this.rendered) return;
@@ -265,7 +433,20 @@ export class ShopApplication extends Application {
       Hooks.off('updateActor', this._actorUpdateHook);
       this._actorUpdateHook = null;
     }
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
     return super.close(options);
+  }
+
+  /** Agenda um re-render da busca, agrupando teclas digitadas em sequência. */
+  _scheduleSearchRender() {
+    if (this._searchTimer) clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+      this._searchTimer = null;
+      this.render();
+    }, 180);
   }
 
   /* ── defaultOptions ─────────────────────────── */
@@ -339,95 +520,21 @@ export class ShopApplication extends Application {
   async _loadAllItems() {
     this._loading = true;
     this._loaded  = false;
-    this.render(); // mostra spinner
 
-    const items  = [];
-    const seen   = new Set();   // evita duplicatas por UUID
+    // Só mostra o spinner se o cache ainda não estiver pronto; com o cache
+    // aquecido (pré-carregado no boot) a abertura é instantânea.
+    if (!shopItemsCacheReady()) this.render();
 
-    const addItem = (doc) => {
-      if (!doc) return;
-      const preco = doc.system?.preco;
-      if (preco === undefined || preco === null || preco === '' || Number(preco) <= 0) return;
-      const uuid = doc.uuid ?? doc.id;
-      if (seen.has(uuid)) return;
-      seen.add(uuid);
-      items.push(this._formatItem(doc));
-    };
-
-    // 1. Itens do mundo
-    if (game.settings.get(MODULE_ID, 'includeWorldItems')) {
-      for (const item of game.items) addItem(item);
+    try {
+      this._allItems = await getShopItems();
+    } catch (e) {
+      console.error(`${MODULE_ID} | Falha ao carregar itens da loja`, e);
+      this._allItems = [];
     }
 
-    // 2. Compêndios do sistema
-    if (game.settings.get(MODULE_ID, 'includeSystemPacks')) {
-      const sysPacks = game.packs.filter(
-        p => p.documentName === 'Item' &&
-             (p.metadata.packageType === 'system' || p.metadata.packageName === game.system.id)
-      );
-      for (const pack of sysPacks) {
-        try {
-          const docs = await pack.getDocuments();
-          for (const doc of docs) addItem(doc);
-        } catch (e) {
-          console.warn(`${MODULE_ID} | Erro ao carregar compêndio ${pack.collection}`, e);
-        }
-      }
-    }
-
-    // 3. Compêndios configurados
-    const extraPacks = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
-    for (const packId of extraPacks) {
-      const pack = game.packs.get(packId);
-      if (!pack || pack.documentName !== 'Item') {
-        console.warn(`${MODULE_ID} | Compêndio inválido ou não é de Itens: ${packId}`);
-        continue;
-      }
-      try {
-        const docs = await pack.getDocuments();
-        for (const doc of docs) addItem(doc);
-      } catch (e) {
-        console.warn(`${MODULE_ID} | Erro ao carregar compêndio ${packId}`, e);
-      }
-    }
-
-    // 4. Itens individuais por UUID
-    const extraItems = game.settings.get(MODULE_ID, 'extraItems') || [];
-    for (const uuid of extraItems) {
-      try {
-        const doc = await fromUuid(uuid);
-        addItem(doc);
-      } catch (e) {
-        console.warn(`${MODULE_ID} | UUID inválido: ${uuid}`, e);
-      }
-    }
-
-    this._allItems = items;
     this._loaded   = true;
     this._loading  = false;
     this.render();
-  }
-
-  /** Formata um documento Item para o formato interno da loja. */
-  _formatItem(doc) {
-    const preco = Number(doc.system?.preco) || 0;
-    const espacosBase = Number(doc.system?.espacos) || 0;
-    const qtd = Number(doc.system?.qtd) || 1;
-    const espacos = espacosBase * qtd;
-    const filterTags = buildFilterTags(doc);
-    return {
-      uuid        : doc.uuid,
-      name        : doc.name,
-      img         : doc.img ?? 'icons/svg/item-bag.svg',
-      type        : doc.type,
-      typeLabel   : typeLabel(doc.type),
-      preco,
-      precoDisplay: precoDisplay(preco),
-      espacos,
-      filterTags,
-      description : doc.system?.description?.value ?? '',
-      source      : doc.system?.source ?? '',
-    };
   }
 
   _getSellItems() {
@@ -451,7 +558,6 @@ export class ShopApplication extends Application {
         sellPrice,
         espacos,
         filterTags,
-        description: item.system?.description?.value ?? '',
         source     : item.system?.source ?? '',
       };
     });
@@ -1243,7 +1349,7 @@ export class ShopApplication extends Application {
     searchInputEl.on('input', ev => {
       this._search = ev.currentTarget.value;
       this._searchFocused = true;
-      this.render();
+      this._scheduleSearchRender();
     });
 
     // Devolve o foco à barra de pesquisa após o render
