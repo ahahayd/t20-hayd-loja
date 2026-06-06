@@ -4,6 +4,7 @@
  */
 
 import { MODULE_ID } from './main.js';
+import { warmShopItemsCache } from './shop-app.js';
 
 export class ShopSettingsApplication extends FormApplication {
 
@@ -85,6 +86,7 @@ export class ShopSettingsApplication extends FormApplication {
       }
       list.push(id);
       await game.settings.set(MODULE_ID, 'extraCompendiums', list);
+      warmShopItemsCache();
       this.render();
     });
 
@@ -93,6 +95,7 @@ export class ShopSettingsApplication extends FormApplication {
       const id   = ev.currentTarget.dataset.id;
       const list = (game.settings.get(MODULE_ID, 'extraCompendiums') || []).filter(p => p !== id);
       await game.settings.set(MODULE_ID, 'extraCompendiums', list);
+      warmShopItemsCache();
       this.render();
     });
 
@@ -113,6 +116,7 @@ export class ShopSettingsApplication extends FormApplication {
       if (list.includes(uuid)) return ui.notifications.warn('Este item já está na lista.');
       list.push(uuid);
       await game.settings.set(MODULE_ID, 'extraItems', list);
+      warmShopItemsCache();
       if (input) input.value = '';
       this.render();
     });
@@ -122,6 +126,7 @@ export class ShopSettingsApplication extends FormApplication {
       const uuid = ev.currentTarget.dataset.uuid;
       const list = (game.settings.get(MODULE_ID, 'extraItems') || []).filter(u => u !== uuid);
       await game.settings.set(MODULE_ID, 'extraItems', list);
+      warmShopItemsCache();
       this.render();
     });
 
@@ -133,6 +138,7 @@ export class ShopSettingsApplication extends FormApplication {
       });
       if (ok) {
         await game.settings.set(MODULE_ID, 'extraCompendiums', []);
+        warmShopItemsCache();
         this.render();
       }
     });
@@ -144,6 +150,7 @@ export class ShopSettingsApplication extends FormApplication {
       });
       if (ok) {
         await game.settings.set(MODULE_ID, 'extraItems', []);
+        warmShopItemsCache();
         this.render();
       }
     });
