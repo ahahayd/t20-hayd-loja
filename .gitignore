@@ -1,0 +1,15 @@
+# Ferramentas de desenvolvimento / agentes de IA
+CLAUDE.md
+AGENTS.md
+.claude/
+.agent/
+
+# Arquivos compactados
+*.rar
+*.zip
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+*.log
+node_modules/

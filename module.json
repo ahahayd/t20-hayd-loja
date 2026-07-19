@@ -1,35 +1,46 @@
 {
-  "id": "loja-t20",
-  "title": "Tormenta20 - Loja",
-  "description": "Módulo de loja integrado para o sistema Tormenta20. Adiciona um botão na ficha do personagem para abrir uma loja com todos os itens do sistema, compêndios configurados e itens individuais. Automatiza o gasto de moedas (TC, TP, TO) na compra.",
-  "version": "1.0.0",
+  "id": "t20-hayd-loja",
+  "title": "T20 Hayd Loja",
+  "description": "<p>Módulo de loja integrado para o sistema Tormenta20. Adiciona um botão na ficha do personagem para abrir uma loja com todos os itens do sistema, compêndios configurados e itens individuais. Automatiza o gasto de moedas (TC, TP, TO) na compra. Compatível com o tema do t20-hayd-ui.</p>",
+  "version": "1.1.0",
   "compatibility": {
     "minimum": "11",
-    "verified": "12",
+    "verified": "13",
     "maximum": "13"
   },
   "authors": [
     {
-      "name": "t20-loja"
+      "name": "Hayd",
+      "flags": {}
     }
   ],
   "esmodules": [
     "scripts/main.js"
   ],
   "styles": [
-    "styles/shop.css"
+    {
+      "src": "styles/shop.css"
+    }
   ],
   "languages": [
     {
       "lang": "pt-BR",
       "name": "Português (Brasil)",
-      "path": "lang/pt-BR.json"
+      "path": "lang/pt-BR.json",
+      "flags": {}
     },
     {
       "lang": "en",
       "name": "English",
-      "path": "lang/pt-BR.json"
+      "path": "lang/pt-BR.json",
+      "flags": {}
     }
   ],
-  "flags": {}
+  "flags": {},
+  "url": "https://github.com/Haydgi/t20-hayd-loja",
+  "manifest": "https://raw.githubusercontent.com/Haydgi/t20-hayd-loja/main/module.json",
+  "download": "https://github.com/Haydgi/t20-hayd-loja/archive/refs/heads/main.zip",
+  "readme": "https://github.com/Haydgi/t20-hayd-loja/blob/main/README.md",
+  "bugs": "https://github.com/Haydgi/t20-hayd-loja/issues",
+  "license": "MIT"
 }
