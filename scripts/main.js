@@ -6,7 +6,72 @@
 import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache } from './shop-app.js';
 import { ShopSettingsApplication } from './settings-app.js';
 
-export const MODULE_ID = 'loja-t20';
+export const MODULE_ID = 't20-hayd-loja';
+
+/* ─────────────────────────────────────────────
+   Integração com o tema t20-hayd-ui
+───────────────────────────────────────────── */
+
+/** true quando o módulo de tema t20-hayd-ui está ativo no mundo. */
+export function temaHayd() {
+  return game.modules?.get('t20-hayd-ui')?.active === true;
+}
+
+/** Cor padrão do t20-hayd-ui (alterável nas configurações do mundo). */
+function corPadraoTema() {
+  try {
+    const v = game.settings.get('t20-hayd-ui', 'corPadrao');
+    if (typeof v === 'string' && v) return v;
+  } catch (_e) { /* módulo/configuração ausente */ }
+  return '#960505';
+}
+
+function corCSSDoUsuario(user) {
+  const c = user?.color;
+  if (c == null) return null;
+  if (typeof c === 'string') return c;
+  if (typeof c.css === 'string') return c.css;
+  const s = c.toString?.();
+  return (typeof s === 'string' && s.startsWith('#')) ? s : null;
+}
+
+/**
+ * Cor de destaque de um ator seguindo as regras do t20-hayd-ui:
+ * cor do primeiro dono jogador (ordem alfabética); sem dono jogador
+ * (ou modo "padrão" configurado no t20-hayd-ui) → cor padrão do tema.
+ */
+export function corDestaqueAtor(ator) {
+  if (!ator) return corPadraoTema();
+  const bruto = ator.getFlag?.('t20-hayd-ui', 'configCor');
+  const modo = (bruto && typeof bruto === 'object')
+    ? (bruto.mode === 'custom' ? 'padrao' : 'auto')
+    : (bruto ?? 'auto');
+  if (modo !== 'padrao') {
+    const donos = game.users
+      .filter(u => !u.isGM && ator.testUserPermission?.(u, 'OWNER'))
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'pt-BR'));
+    for (const dono of donos) {
+      const c = corCSSDoUsuario(dono);
+      if (c) return c;
+    }
+  }
+  return corPadraoTema();
+}
+
+/**
+ * Aplica (ou remove) o tema Hayd na janela de uma Application V1.
+ * A cor de destaque segue o ator que está usando a loja (cor do jogador
+ * dono, como no t20-hayd-ui). Sem o t20-hayd-ui, o visual fica o padrão
+ * neutro do Foundry.
+ */
+export function aplicarTemaLoja(app, ator = null) {
+  const el = app.element?.[0];
+  if (!el) return;
+  const tema = temaHayd();
+  el.classList.toggle('tema-hayd', tema);
+  if (tema) el.style.setProperty('--loja-destaque', corDestaqueAtor(ator));
+  else el.style.removeProperty('--loja-destaque');
+}
 
 /* ─────────────────────────────────────────────
    INIT — Registro de configurações

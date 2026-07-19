@@ -12,7 +12,7 @@
  *   1 TC = 1 cobre | 1 TP = 10 cobre | 1 TO = 100 cobre
  */
 
-import { MODULE_ID } from './main.js';
+import { MODULE_ID, aplicarTemaLoja } from './main.js';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -454,7 +454,7 @@ export class ShopApplication extends Application {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id        : `t20-loja-${foundry.utils.randomID(4)}`,
       title     : 'Loja',
-      template: `modules/loja-t20/templates/shop.hbs`,
+      template: `modules/t20-hayd-loja/templates/shop.hbs`,
   width     : 900,
       height    : 620,
       resizable : true,
@@ -1337,6 +1337,7 @@ export class ShopApplication extends Application {
   /* ── Listeners ──────────────────────────────── */
   activateListeners(html) {
     super.activateListeners(html);
+    aplicarTemaLoja(this, this.actor);
 
     // Pesquisa
     const searchInputEl = html.find('.shop-search-input');
@@ -1546,7 +1547,7 @@ class CartApplication extends Application {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: `t20-loja-cart-${foundry.utils.randomID(4)}`,
       title: 'Carrinho de compras',
-      template: `modules/loja-t20/templates/cart.hbs`,
+      template: `modules/t20-hayd-loja/templates/cart.hbs`,
       width: 520,
       height: 520,
       resizable: true,
@@ -1574,6 +1575,7 @@ class CartApplication extends Application {
 
   activateListeners(html) {
     super.activateListeners(html);
+    aplicarTemaLoja(this, this.shopApp.actor);
 
     html.find('.btn-remove-cart-item').on('click', ev => {
       const uuid = ev.currentTarget.dataset.uuid;

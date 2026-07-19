@@ -3,7 +3,7 @@
  * Permite adicionar/remover compêndios extras e itens individuais por UUID.
  */
 
-import { MODULE_ID } from './main.js';
+import { MODULE_ID, aplicarTemaLoja } from './main.js';
 import { warmShopItemsCache } from './shop-app.js';
 
 export class ShopSettingsApplication extends FormApplication {
@@ -12,7 +12,7 @@ export class ShopSettingsApplication extends FormApplication {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id        : 't20-loja-settings',
       title     : 'Configurações da Loja — Fontes de Itens',
-      template: `modules/loja-t20/templates/shop-settings.hbs`,
+      template: `modules/t20-hayd-loja/templates/shop-settings.hbs`,
       width     : 600,
       height    : 'auto',
       resizable : false,
@@ -72,6 +72,7 @@ export class ShopSettingsApplication extends FormApplication {
   /* ── Listeners ──────────────────────────────── */
   activateListeners(html) {
     super.activateListeners(html);
+    aplicarTemaLoja(this);
 
     // ── Compêndios ──
     // Adicionar compêndio selecionado
