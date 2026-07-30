@@ -1,17 +1,16 @@
 {
   "id": "t20-hayd-loja",
   "title": "T20 Hayd Loja",
-  "description": "<p>Módulo de loja integrado para o sistema Tormenta20. Adiciona um botão na ficha do personagem para abrir uma loja com todos os itens do sistema, compêndios configurados e itens individuais. Automatiza o gasto de moedas (TC, TP, TO) na compra. Compatível com o tema do t20-hayd-ui.</p>",
+  "description": "<p>Loja integrada para o Tormenta20: um botão na ficha do personagem abre a vitrine com itens de compêndios, do mundo e individuais, com busca e filtros avançados. Compra com desconto automático de moedas (TC, T$, TO) e venda de itens do inventário com percentual configurável. Compatível com o tema do t20-hayd-ui.</p>",
   "version": "1.1.0",
   "compatibility": {
-    "minimum": "11",
-    "verified": "13",
-    "maximum": "13"
+    "minimum": "13",
+    "verified": "13"
   },
   "authors": [
     {
       "name": "Hayd",
-      "flags": {}
+      "url": "https://github.com/ahahayd"
     }
   ],
   "esmodules": [
@@ -38,9 +37,20 @@
   ],
   "flags": {},
   "url": "https://github.com/ahahayd/t20-hayd-loja",
-  "manifest": "https://raw.githubusercontent.com/ahahayd/t20-hayd-loja/main/module.json",
-  "download": "https://github.com/ahahayd/t20-hayd-loja/archive/refs/heads/main.zip",
+  "manifest": "https://github.com/ahahayd/t20-hayd-loja/releases/latest/download/module.json",
+  "download": "https://github.com/ahahayd/t20-hayd-loja/releases/download/v1.1.0/module.zip",
   "readme": "https://github.com/ahahayd/t20-hayd-loja/blob/main/README.md",
   "bugs": "https://github.com/ahahayd/t20-hayd-loja/issues",
-  "license": "MIT"
+  "license": "MIT",
+  "relationships": {
+    "systems": [
+      {
+        "id": "tormenta20",
+        "type": "system",
+        "compatibility": {
+          "minimum": "1.5.0"
+        }
+      }
+    ]
+  }
 }
