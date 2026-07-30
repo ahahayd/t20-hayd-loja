@@ -539,7 +539,11 @@ export class ShopApplication extends Application {
 
   _getSellItems() {
     const percent = this._sellPercent / 100;
-    return this.actor.items.map(item => {
+    // Só itens físicos de inventário são vendáveis — poderes, magias,
+    // classes e raças ficam de fora (na compra o filtro de preço > 0 já
+    // os exclui naturalmente).
+    const VENDAVEIS = new Set(['arma', 'equipamento', 'consumivel', 'tesouro']);
+    return this.actor.items.filter(item => VENDAVEIS.has(item.type)).map(item => {
       const preco = Number(item.system?.preco) || 0;
       const qtd = Number(item.system?.qtd) || 1;
       const espacosBase = Number(item.system?.espacos) || 0;
