@@ -41,7 +41,7 @@ Outras configurações: ligar/desligar mensagens de compra no chat, sussurrá-la
 Em *Configurar → Módulos Complementares → Instalar Módulo*, cole a URL do manifesto:
 
 ```
-https://raw.githubusercontent.com/Haydgi/t20-hayd-loja/main/module.json
+https://raw.githubusercontent.com/ahahayd/t20-hayd-loja/main/module.json
 ```
 
 ## Aviso
