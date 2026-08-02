@@ -78,6 +78,10 @@ function normalizeCodes(value) {
     .filter(Boolean);
 }
 
+/* Collator compartilhado: localeCompare avulso reinicializa a máquina de
+ * locale a cada comparação (~5-10x mais lento num sort de milhares). */
+const COLLATOR = new Intl.Collator();
+
 function normalizeText(value) {
   if (!value) return '';
   if (typeof value === 'string') {
@@ -216,6 +220,164 @@ function fromCobre(cobre) {
   return { to, tp, tc };
 }
 
+/* ── Troco realista ─────────────────────────────────────────────
+   Com a opção "Troco realista" ligada, a loja deixa de normalizar a
+   carteira: o personagem paga com as moedas que tem (das menores para
+   as maiores) e recebe troco em espécie, conforme o porte da compra:
+     - compra pequena (< 10 TP): troco todo em cobre (TC);
+     - compra média: troco em prata e cobre (TP + TC);
+     - compra a partir do limiar do mestre (padrão 1000 TP): troco em
+       ouro (TO), com o resto em TP/TC.
+   Desligada, vale o comportamento clássico (redistribuição ótima). */
+
+function trocoRealistaAtivo() {
+  try { return game.settings.get(MODULE_ID, 'trocoRealista'); }
+  catch { return false; }
+}
+
+function limiarTrocoTOCobre() {
+  try { return Math.max(0, Number(game.settings.get(MODULE_ID, 'limiarTrocoTO')) || 1000) * 10; }
+  catch { return 10000; }
+}
+
+/** Distribui um valor em moedas conforme o porte da transação. */
+export function distribuirMoedasRealista(valorCobre, transacaoCobre) {
+  if (valorCobre <= 0) return { to: 0, tp: 0, tc: 0 };
+  if (transacaoCobre >= limiarTrocoTOCobre()) return fromCobre(valorCobre);
+  if (transacaoCobre < 10) return { to: 0, tp: 0, tc: valorCobre }; // compra abaixo de 1 TP: troco em cobre
+  const tp = Math.floor(valorCobre / 10);
+  return { to: 0, tp, tc: valorCobre - tp * 10 };
+}
+
+/**
+ * Debita um custo da carteira. Retorna { to, tp, tc, troco } — `troco`
+ * é null quando não houve (pagamento exato ou modo clássico).
+ * Pré-condição: o chamador já validou saldo suficiente.
+ */
+export function debitarCarteira(wealth, costCopper) {
+  if (!trocoRealistaAtivo()) {
+    const r = fromCobre(toCobre(wealth.to, wealth.tp, wealth.tc) - costCopper);
+    return { ...r, troco: null, pago: null };
+  }
+
+  /* Pagamento com troco MÍNIMO: enumera as poucas combinações candidatas
+   * (piso/teto de cada moeda grande) e escolhe a de menor troco — no
+   * empate, a que gasta menos moedas grandes. Evita o caso "entrega 2 TP
+   * junto de 30 TO e recebe os mesmos 2 TP de volta". */
+  const { to, tp, tc } = wealth;
+  let melhor = null;
+  const considerar = (usaTo, usaTp, usaTc, sobra) => {
+    const trocoCobre = -sobra;
+    if (melhor) {
+      if (trocoCobre > melhor.trocoCobre) return;
+      if (trocoCobre === melhor.trocoCobre
+        && (usaTo > melhor.usaTo || (usaTo === melhor.usaTo && usaTp >= melhor.usaTp))) return;
+    }
+    melhor = { usaTo, usaTp, usaTc, trocoCobre };
+  };
+
+  for (const usaTo of new Set([
+    Math.min(to, Math.floor(costCopper / 100)),
+    Math.min(to, Math.ceil(costCopper / 100))
+  ])) {
+    const r1 = costCopper - usaTo * 100;
+    if (r1 <= 0) { considerar(usaTo, 0, 0, r1); continue; }
+    for (const usaTp of new Set([
+      Math.min(tp, Math.floor(r1 / 10)),
+      Math.min(tp, Math.ceil(r1 / 10))
+    ])) {
+      const r2 = r1 - usaTp * 10;
+      if (r2 <= 0) { considerar(usaTo, usaTp, 0, r2); continue; }
+      const usaTc = Math.min(tc, r2);
+      if (r2 - usaTc <= 0) considerar(usaTo, usaTp, usaTc, r2 - usaTc);
+    }
+  }
+
+  // Rede de segurança (não deve ocorrer com saldo suficiente): greedy antigo
+  if (!melhor) {
+    let resto = costCopper;
+    const usaTc = Math.min(tc, resto); resto -= usaTc;
+    const usaTp = Math.min(tp, Math.ceil(Math.max(0, resto) / 10)); resto -= usaTp * 10;
+    let usaTo = 0;
+    if (resto > 0) { usaTo = Math.min(to, Math.ceil(resto / 100)); resto -= usaTo * 100; }
+    melhor = { usaTo, usaTp, usaTc, trocoCobre: Math.max(0, -resto) };
+  }
+
+  const troco = distribuirMoedasRealista(melhor.trocoCobre, costCopper);
+  return {
+    to: to - melhor.usaTo + troco.to,
+    tp: tp - melhor.usaTp + troco.tp,
+    tc: tc - melhor.usaTc + troco.tc,
+    troco: melhor.trocoCobre > 0 ? troco : null,
+    // Moedas efetivamente entregues ao mercador (para o card do chat)
+    pago: { to: melhor.usaTo, tp: melhor.usaTp, tc: melhor.usaTc }
+  };
+}
+
+/** Linha "Pago" dos cards: as moedas entregues, como deltas negativos. */
+function linhaPagamento(pago) {
+  if (!pago || (pago.to === 0 && pago.tp === 0 && pago.tc === 0)) return '';
+  return linhaCartao('Pago', moedasChips({ to: -pago.to, tp: -pago.tp, tc: -pago.tc }, { delta: true }));
+}
+
+/** Credita um ganho (venda) na carteira, em espécie no modo realista. */
+export function creditarCarteira(wealth, ganhoCobre) {
+  if (!trocoRealistaAtivo()) {
+    return fromCobre(toCobre(wealth.to, wealth.tp, wealth.tc) + ganhoCobre);
+  }
+  const pago = distribuirMoedasRealista(ganhoCobre, ganhoCobre);
+  return { to: wealth.to + pago.to, tp: wealth.tp + pago.tp, tc: wealth.tc + pago.tc };
+}
+
+/* ── Cartões de chat (visual premium) ───────────────────────────
+   HTML puro + CSS — custo idêntico às mensagens antigas. A classe
+   t20-loja-message é preservada: o t20-hayd-management a usa para
+   suprimir estes cartões durante transferências de party. */
+
+/**
+ * Chips de moedas: [12 TO] [3 TP] [5 TC].
+ * Com delta, o chip mantém o FUNDO da moeda e o texto fica verde
+ * (aumento) ou vermelho (diminuição).
+ * TL (platina) só aparece quando a regra opcional está habilitada para o
+ * ator (`mostrarTl`) — ou quando o delta de TL é diferente de zero.
+ */
+export function moedasChips(moedas, { delta = false, ocultarZeros = true, mostrarTl = false } = {}) {
+  const defs = [['tl', 'TL'], ['to', 'TO'], ['tp', 'TP'], ['tc', 'TC']];
+  const chips = [];
+  for (const [k, rotulo] of defs) {
+    const v = Number(moedas?.[k]) || 0;
+    if (k === 'tl' && !mostrarTl && v === 0) continue;
+    if (v === 0 && (ocultarZeros || delta)) continue;
+    const sinal = delta ? (v > 0 ? 'pos' : 'neg') : '';
+    const texto = delta && v > 0 ? `+${v}` : `${v}`;
+    chips.push(`<span class="t20l-coin t20l-${k} ${sinal ? `t20l-${sinal}` : ''}">${texto}<i>${rotulo}</i></span>`);
+  }
+  return chips.length ? chips.join('') : `<span class="t20l-coin t20l-vazio">—</span>`;
+}
+
+/** Cartão padrão da loja para o chat. */
+export function cartaoLoja({ icone, titulo, ator, corpo, saldo, mostrarTl = false }) {
+  return `
+    <div class="t20-loja-message t20l-card">
+      <div class="t20l-head">
+        <i class="fas ${icone}"></i>
+        <div><strong>${ator}</strong><span>${titulo}</span></div>
+      </div>
+      <div class="t20l-body">${corpo}</div>
+      ${saldo ? `<div class="t20l-saldo"><span>Saldo</span>${moedasChips(saldo, { ocultarZeros: false, mostrarTl })}</div>` : ''}
+    </div>`;
+}
+
+/** A regra opcional de Tibar de Platina está ativa para este ator? */
+export function atorUsaPlatina(actor) {
+  return !!actor?.getFlag?.('tormenta20', 'sheet.mostrarPlatina');
+}
+
+/** Linha rótulo/valor do corpo do cartão. */
+export function linhaCartao(rotulo, valorHtml) {
+  return `<div class="t20l-row"><span>${rotulo}</span><div>${valorHtml}</div></div>`;
+}
+
 /** Retorna texto legível para um preço em prata (TP). */
 function precoDisplay(silverPrice) {
   if (silverPrice === 0) return 'Grátis';
@@ -264,17 +426,22 @@ function formatItem(doc) {
   const qtd = Number(doc.system?.qtd) || 1;
   const espacos = espacosBase * qtd;
   const filterTags = buildFilterTags(doc);
+  const label = typeLabel(doc.type);
   return {
     uuid        : doc.uuid,
     name        : doc.name,
     img         : doc.img ?? 'icons/svg/item-bag.svg',
     type        : doc.type,
-    typeLabel   : typeLabel(doc.type),
+    typeLabel   : label,
     preco,
     precoDisplay: precoDisplay(preco),
     espacos,
     filterTags,
     source      : doc.system?.source ?? '',
+    // Busca pré-normalizada UMA vez na construção do cache — antes o
+    // NFD+regex rodava sobre milhares de nomes a cada tecla digitada
+    searchName  : normalizeText(doc.name),
+    searchType  : normalizeText(label),
   };
 }
 
@@ -410,6 +577,7 @@ export class ShopApplication extends Application {
     this._sortBy     = 'name';
     this._mode       = 'buy';
     this._sellPercent = 50;
+    this._buyPercent = 100;
     this._affordableOnly = true;
     this._filterTags = new Set();
     this._filterMatch = 'any';
@@ -470,47 +638,59 @@ export class ShopApplication extends Application {
       await this._loadAllItems();
     }
 
-    const filtered  = this._applyFilters(this._allItems);
-  const sorted    = this._applySort(filtered);
-    const sellItemsRaw = this._getSellItems();
-    const sellFiltered = this._applyFilters(sellItemsRaw);
-    const sellSorted = this._applySort(sellFiltered);
     const wealth    = this._wealthInfo();
     const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
+    const isSellMode = this._mode === 'sell';
 
-    // Enriquece itens com flag "pode comprar"
-    let buyItems = sorted.map(item => ({
-      ...item,
-      canAfford : totalCopper >= Math.round(item.preco * 10),
-    }));
-
-    if (this._affordableOnly) {
-      buyItems = buyItems.filter(item => item.canAfford);
+    /* Só o pipeline do modo ATIVO roda — antes compra e venda eram
+     * computadas (filtro + sort + clone de milhares de itens) em todo
+     * render, e metade era descartada. */
+    let items, totalItems;
+    if (isSellMode) {
+      const sellFiltered = this._applyFilters(this._getSellItems());
+      items = this._applySort(sellFiltered).map(item => ({
+        ...item,
+        sellPriceDisplay: precoDisplay(item.sellPrice),
+      }));
+      totalItems = sellFiltered.length;
+    } else {
+      // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado
+      const filtered = this._applyFilters(this._getSortedAll());
+      // O contador sempre reflete o filtro de busca/tipo/tags (como antes,
+      // sem considerar o "posso pagar")
+      totalItems = filtered.length;
+      // Percentual de preço do modo compra (desconto/acréscimo do mestre)
+      const fator = this._buyPercent / 100;
+      const custoCobre = item => Math.round(item.preco * fator * 10);
+      // Com "só o que posso pagar", filtra ANTES de clonar os objetos
+      const visiveis = this._affordableOnly
+        ? filtered.filter(item => totalCopper >= custoCobre(item))
+        : filtered;
+      items = visiveis.map(item => ({
+        ...item,
+        canAfford : totalCopper >= custoCobre(item),
+        ...(fator !== 1 ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
+      }));
     }
-
-    const sellItems = sellSorted.map(item => ({
-      ...item,
-      sellPriceDisplay: precoDisplay(item.sellPrice),
-    }));
 
     // Coleta tipos únicos para o filtro
     const types = [...new Set(this._allItems.map(i => i.type))]
       .sort()
       .map(t => ({ value: t, label: typeLabel(t) }));
 
-    const isSellMode = this._mode === 'sell';
     return {
       actor      : this.actor,
-      items      : isSellMode ? sellItems : buyItems,
+      items,
       types,
       search     : this._search,
       typeFilter : this._typeFilter,
       sortBy     : this._sortBy,
       wealth,
       loading    : this._loading,
-      totalItems : isSellMode ? sellFiltered.length : filtered.length,
+      totalItems,
       mode       : this._mode,
       sellPercent: this._sellPercent,
+      buyPercent : this._buyPercent,
       affordableOnly: this._affordableOnly,
       filterMatch: this._filterMatch,
     };
@@ -523,7 +703,8 @@ export class ShopApplication extends Application {
 
     // Só mostra o spinner se o cache ainda não estiver pronto; com o cache
     // aquecido (pré-carregado no boot) a abertura é instantânea.
-    if (!shopItemsCacheReady()) this.render();
+    const cacheQuente = shopItemsCacheReady();
+    if (!cacheQuente) this.render();
 
     try {
       this._allItems = await getShopItems();
@@ -534,7 +715,10 @@ export class ShopApplication extends Application {
 
     this._loaded   = true;
     this._loading  = false;
-    this.render();
+    /* Com cache quente, quem chamou foi o getData do PRIMEIRO render, que
+     * continua e desenha com os dados — o render extra daqui dobrava o
+     * custo de abertura. No caminho do spinner o render final é preciso. */
+    if (!cacheQuente) this.render();
   }
 
   _getSellItems() {
@@ -563,6 +747,8 @@ export class ShopApplication extends Application {
         espacos,
         filterTags,
         source     : item.system?.source ?? '',
+        searchName : normalizeText(item.name),
+        searchType : normalizeText(typeLabel(item.type)),
       };
     });
   }
@@ -715,8 +901,8 @@ export class ShopApplication extends Application {
     if (this._search) {
       const q = normalizeText(this._search);
       list = list.filter(i =>
-        normalizeText(i.name).includes(q) ||
-        normalizeText(i.typeLabel).includes(q)
+        (i.searchName ?? normalizeText(i.name)).includes(q) ||
+        (i.searchType ?? normalizeText(i.typeLabel)).includes(q)
       );
     }
     if (this._typeFilter !== 'all') {
@@ -742,9 +928,23 @@ export class ShopApplication extends Application {
     switch (this._sortBy) {
       case 'price-asc'  : return copy.sort((a, b) => a.preco - b.preco);
       case 'price-desc' : return copy.sort((a, b) => b.preco - a.preco);
-      case 'type'       : return copy.sort((a, b) => a.typeLabel.localeCompare(b.typeLabel) || a.name.localeCompare(b.name));
-      default           : return copy.sort((a, b) => a.name.localeCompare(b.name));
+      case 'type'       : return copy.sort((a, b) => COLLATOR.compare(a.typeLabel, b.typeLabel) || COLLATOR.compare(a.name, b.name));
+      default           : return copy.sort((a, b) => COLLATOR.compare(a.name, b.name));
     }
+  }
+
+  /**
+   * Lista completa já ordenada, cacheada por (fonte, critério). Como o
+   * filtro preserva a ordem, filtrar a lista pré-ordenada equivale a
+   * ordenar o resultado filtrado — sem re-ordenar milhares de itens a
+   * cada tecla digitada.
+   */
+  _getSortedAll() {
+    const c = this._sortedCache;
+    if (c && c.source === this._allItems && c.key === this._sortBy) return c.items;
+    const items = this._applySort(this._allItems);
+    this._sortedCache = { source: this._allItems, key: this._sortBy, items };
+    return items;
   }
 
   /* ── Riqueza do ator ─────────────────────────── */
@@ -778,7 +978,8 @@ export class ShopApplication extends Application {
 
     const wealth      = this._wealthInfo();
     const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
-    const costCopper  = Math.round(shopItem.preco * qty * 10);
+    const fatorPreco  = this._buyPercent / 100;
+    const costCopper  = Math.round(shopItem.preco * qty * fatorPreco * 10);
 
     if (totalCopper < costCopper) {
       return ui.notifications.warn(
@@ -786,12 +987,8 @@ export class ShopApplication extends Application {
       );
     }
 
-    // Calcula novo saldo
-    const remaining = totalCopper - costCopper;
-    let newTo, newTp, newTc;
-
-    // Redistribui tudo normalmente
-    ({ to: newTo, tp: newTp, tc: newTc } = fromCobre(remaining));
+    // Calcula novo saldo (troco realista quando ativado)
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
     // Busca documento original para copiar dados
     let sourceDoc;
@@ -826,19 +1023,22 @@ export class ShopApplication extends Application {
       'system.dinheiro.to': newTo,
       'system.dinheiro.tp': newTp,
       'system.dinheiro.tc': newTc,
-    });
+    }, { t20lojaInterno: true });
 
-    const messageContent = `
-      <div class="t20-loja-message">
-        <p><strong>${this.actor.name}</strong> comprou:</p>
-        <ul>
-          <li><strong>Item:</strong> ${shopItem.name}</li>
-          <li><strong>Quantidade:</strong> ${qty}</li>
-          <li><strong>Preço:</strong> ${shopItem.precoDisplay}</li>
-          <li><strong>Saldo final:</strong> ${newTo} TO | ${newTp} TP | ${newTc} TC</li>
-        </ul>
-      </div>
-    `;
+    const messageContent = cartaoLoja({
+      icone: 'fa-shopping-bag',
+      titulo: this._buyPercent === 100
+        ? 'comprou na loja'
+        : `comprou na loja (${this._buyPercent}% do preço)`,
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item"><img src="${shopItem.img}" alt="" />${shopItem.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
+        ${linhaCartao('Preço', `<b>${precoDisplay(shopItem.preco * fatorPreco)}</b>${qty > 1 ? ` <small>cada</small>` : ''}`)}
+        ${linhaPagamento(pago)}
+        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
 
     if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
       await ChatMessage.create({
@@ -875,9 +1075,8 @@ export class ShopApplication extends Application {
     const sellCopper = Math.round(preco * sellQty * percent * 10);
 
     const wealth = this._wealthInfo();
-    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
-    const newTotal = totalCopper + sellCopper;
-    const { to: newTo, tp: newTp, tc: newTc } = fromCobre(newTotal);
+    // Modo realista: recebe as moedas em espécie, sem normalizar a carteira
+    const { to: newTo, tp: newTp, tc: newTc } = creditarCarteira(wealth, sellCopper);
 
     if (sellQty >= qtd) {
       await item.delete();
@@ -889,20 +1088,23 @@ export class ShopApplication extends Application {
       'system.dinheiro.to': newTo,
       'system.dinheiro.tp': newTp,
       'system.dinheiro.tc': newTc,
-    });
+    }, { t20lojaInterno: true });
 
-    const messageContent = `
-      <div class="t20-loja-message">
-        <p><strong>${this.actor.name}</strong> vendeu:</p>
-        <ul>
-          <li><strong>Item:</strong> ${item.name}</li>
-          <li><strong>Quantidade:</strong> ${sellQty}</li>
-          <li><strong>Percentual:</strong> ${Math.round(percent * 100)}%</li>
-          <li><strong>Recebido:</strong> ${precoDisplay(preco * sellQty * percent)}</li>
-          <li><strong>Saldo final:</strong> ${newTo} TO | ${newTp} TP | ${newTc} TC</li>
-        </ul>
-      </div>
-    `;
+    const recebidoMoedas = trocoRealistaAtivo()
+      ? distribuirMoedasRealista(sellCopper, sellCopper)
+      : null;
+    const messageContent = cartaoLoja({
+      icone: 'fa-hand-holding-usd',
+      titulo: `vendeu (${Math.round(percent * 100)}% do valor)`,
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item"><img src="${item.img}" alt="" />${item.name}${sellQty > 1 ? ` <em>×${sellQty}</em>` : ''}</div>
+        ${linhaCartao('Recebido', recebidoMoedas
+          ? moedasChips(recebidoMoedas)
+          : `<b>${precoDisplay(preco * sellQty * percent)}</b>`)}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
 
     if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
       await ChatMessage.create({
@@ -978,8 +1180,7 @@ export class ShopApplication extends Application {
       );
     }
 
-    const remaining = totalCopper - costCopper;
-    const { to: newTo, tp: newTp, tc: newTc } = fromCobre(remaining);
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
     let sourceDoc;
     try {
@@ -1008,22 +1209,25 @@ export class ShopApplication extends Application {
       'system.dinheiro.to': newTo,
       'system.dinheiro.tp': newTp,
       'system.dinheiro.tc': newTc,
-    });
+    }, { t20lojaInterno: true });
 
-    const messageContent = `
-      <div class="t20-loja-message">
-        <p><strong>${this.actor.name}</strong> construiu:</p>
-        <ul>
-          <li><strong>Item:</strong> ${shopItem.name}</li>
-          <li><strong>Quantidade:</strong> ${qty}</li>
-          <li><strong>Fração do preço:</strong> ${fractionLabel}</li>
-          <li><strong>Custo por item:</strong> ${formatCraftCost(unitCostCopper)}</li>
-          <li><strong>Desconto matéria prima:</strong> ${formatCraftCost(Math.round(materialDiscount * 10))}</li>
-          <li><strong>Total pago:</strong> ${formatCraftCost(totalCostCopper)}</li>
-          <li><strong>Saldo final:</strong> ${newTo} TO | ${newTp} TP | ${newTc} TC</li>
-        </ul>
-      </div>
-    `;
+    const descontoCobre = Math.round(materialDiscount * 10);
+    const messageContent = cartaoLoja({
+      icone: 'fa-hammer',
+      titulo: `construiu (${fractionLabel} do preço)`,
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item"><img src="${shopItem.img}" alt="" />${shopItem.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
+        ${linhaCartao('Custo por item', `<b>${formatCraftCost(unitCostCopper)}</b>`)}
+        ${linhaCartao('Desconto matéria-prima', descontoCobre > 0
+          ? `<b>${formatCraftCost(descontoCobre)}</b>`
+          : `<small class="t20l-nulo">Não houve</small>`)}
+        ${linhaCartao('Total pago', `<b>${formatCraftCost(totalCostCopper)}</b>`)}
+        ${linhaPagamento(pago)}
+        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
 
     if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
       await ChatMessage.create({
@@ -1284,14 +1488,13 @@ export class ShopApplication extends Application {
       return ui.notifications.warn('Moedas insuficientes para aplicar aprimoramentos.');
     }
 
-    const remaining = totalCopper - totalCostCopper;
-    const { to: newTo, tp: newTp, tc: newTc } = fromCobre(remaining);
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, totalCostCopper);
 
     await this.actor.update({
       'system.dinheiro.to': newTo,
       'system.dinheiro.tp': newTp,
       'system.dinheiro.tc': newTc,
-    });
+    }, { t20lojaInterno: true });
 
     const formatCost = costCopper => {
       if (costCopper <= 0) return 'Grátis';
@@ -1300,25 +1503,27 @@ export class ShopApplication extends Application {
     };
 
     const itemName = data.itemName || 'Item';
-    const messageContent = `
-      <div class="t20-loja-message">
-        <p><strong>${this.actor.name}</strong> aplicou aprimoramentos:</p>
-        <ul>
-          <li><strong>Item:</strong> ${itemName}</li>
-          <li><strong>Melhorias:</strong> +${addUpgrades} (já tinha ${currentUpgrades})</li>
-          <li><strong>Encantos:</strong> +${addEnchants} (já tinha ${currentEnchants})</li>
-          <li><strong>Custo base:</strong> ${formatCost(baseCostCopper)}</li>
-          ${extraCost > 0 ? `<li><strong>Material especial:</strong> ${formatCost(Math.round(extraCost * 10))}</li>` : ''}
-          ${data.mode === 'buy'
-            ? `<li><strong>Compra:</strong> ${buyPercent}%</li>`
-            : `<li><strong>Fabricação:</strong> ${Math.round((craftFraction) * 100)}% | ${craftDiscount > 0
-                ? `Desconto ${formatCost(Math.round(craftDiscount * 10))}`
-                : 'Sem desconto'}</li>`}
-          <li><strong>Total pago:</strong> ${formatCost(totalCostCopper)}</li>
-          <li><strong>Saldo final:</strong> ${newTo} TO | ${newTp} TP | ${newTc} TC</li>
-        </ul>
-      </div>
-    `;
+    const messageContent = cartaoLoja({
+      icone: 'fa-wand-sparkles',
+      titulo: 'aplicou aprimoramentos',
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item">${itemName}</div>
+        ${linhaCartao('Melhorias', `<b>+${addUpgrades}</b> <small>(já tinha ${currentUpgrades})</small>`)}
+        ${linhaCartao('Encantos', `<b>+${addEnchants}</b> <small>(já tinha ${currentEnchants})</small>`)}
+        ${linhaCartao('Custo base', `<b>${formatCost(baseCostCopper)}</b>`)}
+        ${extraCost > 0 ? linhaCartao('Material especial', `<b>${formatCost(Math.round(extraCost * 10))}</b>`) : ''}
+        ${data.mode === 'buy'
+          ? linhaCartao('Compra', `<b>${buyPercent}%</b>`)
+          : linhaCartao('Fabricação', `<b>${Math.round((craftFraction) * 100)}%</b> · ${craftDiscount > 0
+              ? `desconto ${formatCost(Math.round(craftDiscount * 10))}`
+              : '<small class="t20l-nulo">sem desconto</small>'}`)}
+        ${linhaCartao('Total pago', `<b>${formatCost(totalCostCopper)}</b>`)}
+        ${linhaPagamento(pago)}
+        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
 
     if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
       await ChatMessage.create({
@@ -1426,6 +1631,30 @@ export class ShopApplication extends Application {
     });
 
     sellRange.on('change', () => {
+      this.render();
+    });
+
+    // Botões −10% / +10% do percentual de venda
+    html.find('.sell-pct-step').on('click', ev => {
+      applySellPercent(this._sellPercent + Number(ev.currentTarget.dataset.step));
+      this.render();
+    });
+
+    // Percentual de preço do modo compra (10%–200%, padrão 100%)
+    const buyRange = html.find('.shop-buy-percent');
+    const buyInput = html.find('.shop-buy-percent-input');
+    const applyBuyPercent = value => {
+      const clamped = Math.min(200, Math.max(10, Number(value) || 100));
+      this._buyPercent = clamped;
+      buyRange.val(clamped);
+      buyInput.val(clamped);
+    };
+    buyRange.on('input', ev => applyBuyPercent(ev.currentTarget.value));
+    buyRange.on('change', () => this.render());
+    buyInput.on('input', ev => applyBuyPercent(ev.currentTarget.value));
+    buyInput.on('change', () => this.render());
+    html.find('.buy-pct-step').on('click', ev => {
+      applyBuyPercent(this._buyPercent + Number(ev.currentTarget.dataset.step));
       this.render();
     });
 
@@ -1623,6 +1852,12 @@ class CartApplication extends Application {
       this.render();
     });
 
+    // Botões −10% / +10% do percentual do carrinho
+    html.find('.cart-pct-step').on('click', ev => {
+      applyDiscount(this._discountPercent + Number(ev.currentTarget.dataset.step));
+      this.render();
+    });
+
     discountInput.on('input', ev => {
       applyDiscount(ev.currentTarget.value);
     });
@@ -1649,8 +1884,7 @@ class CartApplication extends Application {
       return ui.notifications.warn('Moedas insuficientes para finalizar a compra.');
     }
 
-    const remaining = totalCopper - costCopper;
-    const { to: newTo, tp: newTp, tc: newTc } = fromCobre(remaining);
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
     const purchasedLines = [];
 
@@ -1689,20 +1923,26 @@ class CartApplication extends Application {
       'system.dinheiro.to': newTo,
       'system.dinheiro.tp': newTp,
       'system.dinheiro.tc': newTc,
-    });
+    }, { t20lojaInterno: true });
 
     if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
-      const messageContent = `
-        <div class="t20-loja-message">
-          <p><strong>${this.shopApp.actor.name}</strong> comprou:</p>
-          <ul>
-            ${purchasedLines.map(line => `<li><strong>${line.name}</strong> x${line.qty} — ${line.paid}</li>`).join('')}
-            <li><strong>Desconto/Acréscimo:</strong> ${this._discountPercent}%</li>
-            <li><strong>Total:</strong> ${precoDisplay(total)}</li>
-            <li><strong>Saldo final:</strong> ${newTo} TO | ${newTp} TP | ${newTc} TC</li>
-          </ul>
-        </div>
-      `;
+      const linhas = purchasedLines
+        .map(line => `<div class="t20l-item t20l-compacto">${line.name}${line.qty > 1 ? ` <em>×${line.qty}</em>` : ''}<b>${line.paid}</b></div>`)
+        .join('');
+      const messageContent = cartaoLoja({
+        icone: 'fa-shopping-cart',
+        titulo: this._discountPercent === 100
+          ? 'finalizou a compra'
+          : `finalizou a compra (${this._discountPercent}% do preço)`,
+        ator: this.shopApp.actor.name,
+        corpo: `
+          ${linhas}
+          ${linhaCartao('Total', `<b>${precoDisplay(total)}</b>`)}
+          ${linhaPagamento(pago)}
+          ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+        saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+        mostrarTl: atorUsaPlatina(this.shopApp.actor)
+      });
 
       await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this.shopApp.actor }),

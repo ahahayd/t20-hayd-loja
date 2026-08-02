@@ -51,12 +51,22 @@
           <span>Somente itens que posso comprar</span>
         </label>
       </div>
+      <div class="filter-group sell-percent-group buy-percent-group">
+        <label>Preço</label>
+        <button type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
+        <input type="range" class="shop-buy-percent" min="10" max="200" step="1" value="{{buyPercent}}">
+        <button type="button" class="pct-step buy-pct-step" data-step="10" title="+10%">+10</button>
+        <input type="number" class="shop-buy-percent-input" min="10" max="200" step="1" value="{{buyPercent}}">
+        <span class="sell-percent-label">%</span>
+      </div>
     {{/if}}
 
     {{#if (eq mode "sell")}}
       <div class="filter-group sell-percent-group">
         <label>Venda</label>
+        <button type="button" class="pct-step sell-pct-step" data-step="-10" title="−10%">−10</button>
         <input type="range" class="shop-sell-percent" min="1" max="100" step="1" value="{{sellPercent}}">
+        <button type="button" class="pct-step sell-pct-step" data-step="10" title="+10%">+10</button>
         <input type="number" class="shop-sell-percent-input" min="1" max="100" step="1" value="{{sellPercent}}">
         <span class="sell-percent-label">%</span>
       </div>
@@ -216,7 +226,7 @@
           {{#each items}}
           <tr class="shop-item-row {{#if (eq ../mode "buy")}}{{#unless canAfford}}cannot-afford{{/unless}}{{/if}}">
             <td class="col-img">
-              <img class="shop-item-img" src="{{img}}" alt="{{name}}"
+              <img class="shop-item-img" src="{{img}}" alt="{{name}}" loading="lazy"
                    data-uuid="{{uuid}}" draggable="true" title="Arrastar para cena/ficha">
             </td>
             <td class="col-name">
