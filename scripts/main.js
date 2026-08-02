@@ -3,7 +3,7 @@
  * Ponto de entrada principal.
  */
 
-import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache } from './shop-app.js';
+import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache, moedasChips, cartaoLoja, linhaCartao, atorUsaPlatina } from './shop-app.js';
 import { ShopSettingsApplication } from './settings-app.js';
 
 export const MODULE_ID = 't20-hayd-loja';
@@ -43,9 +43,12 @@ function corCSSDoUsuario(user) {
 export function corDestaqueAtor(ator) {
   if (!ator) return corPadraoTema();
   const bruto = ator.getFlag?.('t20-hayd-ui', 'configCor');
-  const modo = (bruto && typeof bruto === 'object')
-    ? (bruto.mode === 'custom' ? 'padrao' : 'auto')
-    : (bruto ?? 'auto');
+  // Modo "custom" do t20-hayd-ui: cor escolhida pelo dono da ficha
+  if (bruto && typeof bruto === 'object' && bruto.mode === 'custom'
+    && /^#[0-9a-f]{6}$/i.test(bruto.cor ?? '')) {
+    return bruto.cor;
+  }
+  const modo = (bruto && typeof bruto === 'object') ? 'auto' : (bruto ?? 'auto');
   if (modo !== 'padrao') {
     const donos = game.users
       .filter(u => !u.isGM && ator.testUserPermission?.(u, 'OWNER'))
@@ -121,6 +124,26 @@ Hooks.once('init', () => {
     onChange: () => warmShopItemsCache()
   });
 
+  // Troco realista: paga em espécie, sem normalizar a carteira
+  game.settings.register(MODULE_ID, 'trocoRealista', {
+    name: 'Troco realista (moedas em espécie)',
+    hint: 'O mercador passa a dar troco como na vida real: o personagem paga com as moedas que tem no bolso e recebe a diferença em cobre e prata — ou em ouro, nas compras mais caras. As moedas param de ser reorganizadas automaticamente a cada compra.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  // Limiar (em TP) a partir do qual o troco vem em Tibares de Ouro
+  game.settings.register(MODULE_ID, 'limiarTrocoTO', {
+    name: 'Troco realista: limiar para troco em TO',
+    hint: 'Compras a partir deste valor (em T$/TP) recebem o troco em Tibares de Ouro. Padrão: 1000.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 1000
+  });
+
   // Mensagens de compra/venda no chat
   game.settings.register(MODULE_ID, 'enableChatMessages', {
     name: 'Enviar mensagem no chat ao comprar/vender',
@@ -181,10 +204,16 @@ Hooks.once('ready', () => {
 
 // Invalida (e reaquece) o cache quando itens do mundo são alterados.
 // Itens embutidos (em fichas) e de compêndio não afetam a lista da loja.
-const onWorldItemChange = item => {
-  if (item?.isEmbedded || item?.pack) return;
+// Debounced: uma importação em massa de N itens dispara UMA reconstrução
+// (antes eram N), e mundos sem "incluir itens do mundo" nem reconstroem.
+const rebuildShopCache = foundry.utils.debounce(() => {
   invalidateShopItemsCache();
   warmShopItemsCache();
+}, 250);
+const onWorldItemChange = item => {
+  if (item?.isEmbedded || item?.pack) return;
+  if (!game.settings.get(MODULE_ID, 'includeWorldItems')) return;
+  rebuildShopCache();
 };
 Hooks.on('createItem', onWorldItemChange);
 Hooks.on('updateItem', onWorldItemChange);
@@ -230,22 +259,33 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
 
 const moneySnapshots = new Map();
 
-function formatCoins(data) {
-  return `${data.to || 0} TO | ${data.tp || 0} TP | ${data.tc || 0} TC`;
-}
-
-function formatDelta(delta) {
-  const sign = value => (value >= 0 ? `+${value}` : `${value}`);
-  return `${sign(delta.to)} TO | ${sign(delta.tp)} TP | ${sign(delta.tc)} TC`;
-}
-
 Hooks.on('preUpdateActor', (actor, data) => {
   if (!data?.system?.dinheiro) return;
   moneySnapshots.set(actor.id, foundry.utils.deepClone(actor.system?.dinheiro ?? {}));
 });
 
-Hooks.on('updateActor', (actor, data, _options, userId) => {
+/* Alterações consecutivas (compras em sequência, ajustes na ficha) são
+ * AGRUPADAS: o "antes" é congelado na primeira mudança e o cartão só sai
+ * depois de uma pausa, com o delta total do período. */
+const alteracoesPendentes = new Map(); // actorId -> { antes, timer }
+const JANELA_AGRUPAMENTO_MS = 3000;
+
+Hooks.on('updateActor', (actor, data, options, userId) => {
   if (!data?.system?.dinheiro) return;
+
+  /* Transações da própria loja (compra/venda/construção/aprimoramento)
+   * já publicam o próprio cartão — o monitor ignora esses updates para
+   * não duplicar mensagens. */
+  if (options?.t20lojaInterno) {
+    moneySnapshots.delete(actor.id);
+    return;
+  }
+
+  // Só o cliente que INICIOU o update publica (evita um card por cliente)
+  if (game.user.id !== userId) {
+    moneySnapshots.delete(actor.id);
+    return;
+  }
 
   const monitorAll = game.settings.get(MODULE_ID, 'monitorAllMoneyChanges');
   const monitorPlayers = game.settings.get(MODULE_ID, 'monitorPlayerMoneyChanges');
@@ -256,31 +296,46 @@ Hooks.on('updateActor', (actor, data, _options, userId) => {
 
   const previous = moneySnapshots.get(actor.id);
   moneySnapshots.delete(actor.id);
-  if (!previous) return;
 
-  const current = actor.system?.dinheiro ?? {};
-  const delta = {
-    to: (current.to || 0) - (previous.to || 0),
-    tp: (current.tp || 0) - (previous.tp || 0),
-    tc: (current.tc || 0) - (previous.tc || 0),
-  };
+  let pendente = alteracoesPendentes.get(actor.id);
+  if (!pendente) {
+    if (!previous) return;
+    pendente = { antes: previous };
+    alteracoesPendentes.set(actor.id, pendente);
+  }
+  clearTimeout(pendente.timer);
 
-  if (delta.to === 0 && delta.tp === 0 && delta.tc === 0) return;
+  pendente.timer = setTimeout(() => {
+    alteracoesPendentes.delete(actor.id);
+    const atorAtual = game.actors.get(actor.id);
+    if (!atorAtual) return;
 
-  const messageContent = `
-    <div class="t20-loja-message">
-      <p><strong>${actor.name}</strong> alterou moedas:</p>
-      <ul>
-        <li><strong>Antes:</strong> ${formatCoins(previous)}</li>
-        <li><strong>Alteração:</strong> ${formatDelta(delta)}</li>
-        <li><strong>Novo saldo:</strong> ${formatCoins(current)}</li>
-      </ul>
-    </div>
-  `;
+    const antes = pendente.antes;
+    const current = atorAtual.system?.dinheiro ?? {};
+    const delta = {
+      tl: (current.tl || 0) - (antes.tl || 0),
+      to: (current.to || 0) - (antes.to || 0),
+      tp: (current.tp || 0) - (antes.tp || 0),
+      tc: (current.tc || 0) - (antes.tc || 0),
+    };
+    if (delta.tl === 0 && delta.to === 0 && delta.tp === 0 && delta.tc === 0) return;
 
-  ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor }),
-    content: messageContent,
-    whisper: game.users.filter(user => user.isGM).map(user => user.id),
-  });
+    const mostrarTl = atorUsaPlatina(atorAtual);
+    const messageContent = cartaoLoja({
+      icone: 'fa-coins',
+      titulo: 'alterou as moedas',
+      ator: atorAtual.name,
+      corpo: `
+        ${linhaCartao('Antes', moedasChips(antes, { ocultarZeros: false, mostrarTl }))}
+        ${linhaCartao('Alteração', moedasChips(delta, { delta: true, mostrarTl }))}`,
+      saldo: current,
+      mostrarTl
+    });
+
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: atorAtual }),
+      content: messageContent,
+      whisper: game.users.filter(u => u.isGM).map(u => u.id),
+    });
+  }, JANELA_AGRUPAMENTO_MS);
 });

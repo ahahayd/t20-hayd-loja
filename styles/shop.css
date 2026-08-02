@@ -525,3 +525,125 @@
 /* Vazio / carregando */
 .tema-hayd .shop-loading,
 .tema-hayd .shop-empty { color: var(--loja-texto-fraco); }
+
+/* ═══ Cartões de chat premium ═══════════════════════════════════════════ */
+
+.t20-loja-message.t20l-card {
+  border: 1px solid rgba(120, 120, 130, 0.35);
+  border-left: 3px solid var(--t20a-chat-cor, #b5891f);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: var(--font-size-13, 13px);
+  line-height: 1.4;
+}
+.t20l-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(120, 120, 130, 0.25);
+}
+.t20l-head > i {
+  font-size: 1.15em;
+  color: var(--t20a-chat-cor, #b5891f);
+  width: 20px;
+  text-align: center;
+}
+.t20l-head strong { display: block; line-height: 1.15; }
+.t20l-head span { font-size: 0.85em; opacity: 0.75; }
+
+.t20l-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.t20l-item img {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: none;
+  flex: 0 0 auto;
+}
+.t20l-item em { font-style: normal; opacity: 0.75; font-weight: 400; }
+.t20l-item.t20l-compacto { font-weight: 400; }
+.t20l-item.t20l-compacto b { margin-left: auto; white-space: nowrap; }
+
+.t20l-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0;
+}
+.t20l-row > span {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.65;
+  flex: 0 0 auto;
+  min-width: 52px;
+}
+.t20l-row > div { display: flex; flex-wrap: wrap; gap: 3px; align-items: baseline; }
+.t20l-nulo { opacity: 0.6; font-style: italic; }
+
+.t20l-saldo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(120, 120, 130, 0.25);
+}
+.t20l-saldo > span {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.65;
+}
+
+/* Chips de moedas */
+.t20l-coin {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 0.92em;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.t20l-coin i {
+  font-style: normal;
+  font-size: 0.72em;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+.t20l-tl { background: rgba(190, 225, 235, 0.18); border-color: rgba(140, 190, 205, 0.5); color: #7fb6c6; }
+.t20l-to { background: rgba(212, 175, 55, 0.16); border-color: rgba(212, 175, 55, 0.5); color: #c9a227; }
+.t20l-tp { background: rgba(170, 175, 185, 0.16); border-color: rgba(160, 165, 175, 0.5); color: #9aa0ab; }
+.t20l-tc { background: rgba(184, 115, 51, 0.15); border-color: rgba(184, 115, 51, 0.5); color: #b87333; }
+/* Deltas: o chip MANTÉM o fundo/borda da moeda alterada; apenas o texto
+   fica verde (aumento) ou vermelho (diminuição). Para inverter ou
+   reverter esse comportamento, basta trocar/remover estas duas cores. */
+.t20l-coin.t20l-pos { color: #4caf50; }
+.t20l-coin.t20l-neg { color: #e57373; }
+.t20l-vazio { opacity: 0.55; border-color: rgba(120, 120, 130, 0.3); }
+
+/* ═══ Botões ±10% das barras de percentual ══════════════════════════════ */
+
+.pct-step {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 4px;
+}
