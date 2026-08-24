@@ -28,13 +28,18 @@
           {{#each items}}
           <tr class="cart-item-row">
             <td class="col-img"><img class="shop-item-img" src="{{img}}" alt="{{name}}"></td>
-            <td class="col-name">{{name}}</td>
+            <td class="col-name">
+              {{name}}
+              {{#if isSpell}}
+                <span class="cart-item-variant">{{#if (eq spellForma "pocao")}}Poção · {{spellPM}} PM{{else}}Pergaminho{{/if}}</span>
+              {{/if}}
+            </td>
             <td class="col-qty">
-              <input type="number" class="cart-qty-input" data-uuid="{{uuid}}" min="1" value="{{qty}}">
+              <input type="number" class="cart-qty-input" data-key="{{key}}" min="1" value="{{qty}}">
             </td>
             <td class="col-price">{{lineDisplay}}</td>
             <td class="col-action">
-              <button class="btn-remove-cart-item" data-uuid="{{uuid}}" title="Remover">
+              <button class="btn-remove-cart-item" data-key="{{key}}" title="Remover">
                 <i class="fas fa-trash"></i>
               </button>
             </td>

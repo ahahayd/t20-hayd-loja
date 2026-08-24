@@ -22,6 +22,8 @@ https://github.com/ahahayd/t20-hayd-loja/releases/latest/download/module.json
 
 Abra a ficha do personagem e clique em **Loja** no topo da janela. Busque ou filtre o item desejado e clique em **Comprar** — o preço é descontado das moedas (TC, T$, TO) e o item entra no inventário. Uma barra de percentual permite ajustar o valor da compra de 10% a 200% do preço, para pechinchas e mercadores gananciosos. Sem saldo suficiente, a compra é bloqueada.
 
+Também é possível comprar magias, como pergaminho (versão padrão) ou poção (com aprimoramentos escolhidos na hora).
+
 ### Vender
 
 Na aba de venda, escolha itens do próprio inventário e o percentual do preço a receber. Itens de poder e habilidades não aparecem na lista — só o que faz sentido vender.

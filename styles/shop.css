@@ -16,7 +16,9 @@
   padding: 0 8px;
   cursor: pointer;
   white-space: nowrap;
+  transition: opacity 0.15s;
 }
+.t20-loja-btn:hover { opacity: 0.8; }
 .t20-loja-btn i { font-size: 0.9em; }
 
 /* ── Janela da Loja — layout ─────────────────────────────── */
@@ -94,6 +96,7 @@
   width: auto;
   padding: 2px 10px;
   line-height: 1.4;
+  transition: box-shadow 0.15s, background 0.15s;
 }
 .shop-mode-toggle .mode-btn.active {
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.45);
@@ -154,7 +157,24 @@
   cursor: pointer;
   font-weight: bold;
   padding: 3px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
 }
+.side-filter-group summary:hover { background: rgba(128, 128, 128, 0.12); }
+.side-filter-group summary::-webkit-details-marker { display: none; }
+.side-filter-group summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  opacity: 0.65;
+  transform: rotate(-45deg);
+  transition: transform 0.18s ease;
+}
+.side-filter-group.t20l-open summary::before { transform: rotate(45deg); }
 .side-filter-group .filter-options { padding: 2px 4px 4px 10px; }
 .filter-subgroup { margin-bottom: 6px; }
 .filter-subtitle {
@@ -202,6 +222,7 @@
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
   vertical-align: middle;
 }
+.shop-item-row { transition: background 0.12s; }
 .shop-item-row:hover { background: rgba(128, 128, 128, 0.12); }
 .shop-item-row.cannot-afford { opacity: 0.55; }
 
@@ -245,7 +266,14 @@
   padding: 0;
   line-height: 1;
   flex: 0 0 auto;
+  transition: transform 0.1s;
 }
+.buy-actions button:hover:not(:disabled),
+.btn-sell:hover,
+.btn-remove-cart-item:hover { transform: translateY(-1px); }
+.buy-actions button:active:not(:disabled),
+.btn-sell:active,
+.btn-remove-cart-item:active { transform: translateY(0); }
 .btn-buy.disabled { opacity: 0.5; cursor: not-allowed; }
 
 .shop-loading,
@@ -309,6 +337,11 @@
   vertical-align: middle;
 }
 .cart-qty-input { width: 56px; }
+.cart-item-variant {
+  display: block;
+  font-size: 0.75em;
+  opacity: 0.65;
+}
 .cart-footer {
   display: flex;
   align-items: center;
@@ -321,7 +354,7 @@
 .cart-actions { display: flex; gap: 6px; }
 .cart-actions button { width: auto; padding: 2px 10px; line-height: 1.4; }
 
-/* ── Diálogos (quantidade, construção, aprimoramentos) ───── */
+/* ── Diálogos (quantidade, construção, aprimoramentos, magias) ───── */
 .t20-loja-qty .qty-row,
 .t20-loja-craft-dialog .craft-row,
 .t20-loja-upgrade-dialog .upgrade-row {
@@ -341,6 +374,7 @@
 .t20-loja-upgrade-dialog input[type="range"] { flex: 1; width: auto; }
 .t20-loja-craft-dialog select,
 .t20-loja-upgrade-dialog select { width: auto; flex: 0 0 auto; }
+.t20-loja-spell-dialog .spell-dialog-hint { margin: 0 0 8px; font-size: 0.9em; opacity: 0.8; }
 .craft-preview,
 .upgrade-preview,
 .qty-preview {
@@ -368,7 +402,7 @@
 }
 .t20-loja-settings-form .pack-select-dropdown,
 .t20-loja-settings-form .uuid-input { flex: 1; }
-.t20-loja-settings-form .btn-add { width: auto; flex: 0 0 auto; padding: 2px 10px; }
+.t20-loja-settings-form .btn-add { width: auto; flex: 0 0 auto; padding: 2px 10px; transition: background 0.15s; }
 .configured-list { display: flex; flex-direction: column; gap: 3px; }
 .configured-row {
   display: flex;
@@ -387,8 +421,9 @@
   padding: 0;
   line-height: 1;
   flex: 0 0 auto;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-clear { width: auto; margin-top: 4px; padding: 2px 10px; }
+.btn-clear { width: auto; margin-top: 4px; padding: 2px 10px; transition: border-color 0.15s, color 0.15s; }
 .empty-list { font-size: 0.85em; opacity: 0.7; font-style: italic; }
 .settings-footer { border-top: 1px solid rgba(128, 128, 128, 0.25); padding-top: 6px; }
 

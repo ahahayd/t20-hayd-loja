@@ -48,11 +48,130 @@ const EQUIPMENT_USAGE = ['equipado2.hand', 'equipado2.body', 'equipado2.both'];
 
 const CONSUMABLE_TYPES = ['ammo', 'scroll', 'alchemy', 'potion', 'material', 'food'];
 
+const SPELL_SCHOOLS = ['abj', 'adv', 'con', 'enc', 'evo', 'ilu', 'nec', 'tra'];
+const SPELL_TYPE_CODES = ['arc', 'div', 'uni', 'eng', 'sim'];
+const SPELL_CIRCLES = [1, 2, 3, 4, 5];
+
 const UPGRADE_COSTS = [300, 3000, 9000, 18000];
 const ENCHANT_COSTS = [18000, 36000, 72000];
 
+/* Magias (item.type "magia" — "spell" é mantido por compatibilidade com
+ * eventuais compêndios de outros sistemas/traduções). Pergaminhos e poções
+ * seguem a mesma fórmula que o próprio Tormenta20 usa para criá-los a
+ * partir de uma magia: T$ 30 × (custo em PM)², com o custo em PM nunca
+ * menor que 1 (cobre truques de 0 PM). */
+const SPELL_TYPES = ['magia', 'spell'];
+
+function isSpellType(type) {
+  return SPELL_TYPES.includes(type);
+}
+
 function typeLabel(type) {
   return TYPE_LABELS[type] ?? type ?? 'Item';
+}
+
+/** Preço (em TP) de um pergaminho/poção-base para `custoPM` PM investidos. */
+function spellConsumablePrice(custoPM) {
+  return 30 * Math.max(1, Number(custoPM) || 0) ** 2;
+}
+
+/**
+ * Descreve, em HTML, quais aprimoramentos estruturados foram marcados no
+ * diálogo de conjuração (com quantas aplicações cada, para os que podem
+ * ser aplicados mais de uma vez) e o ajuste manual de custo em PM, se
+ * houver. Usado para deixar isso registrado na descrição da poção.
+ */
+function describeAprimoramentosHtml(tempItem, configuration) {
+  const aprs = configuration?.aprs ?? {};
+  const effects = tempItem?.validOnUseEffects ?? [];
+  const linhas = [];
+
+  for (const [id, entry] of Object.entries(aprs)) {
+    if (!entry) continue;
+    const effect = effects.find(ef => ef.id === id);
+    if (!effect) continue;
+    if (effect.getFlag('tormenta20', 'aumenta')) {
+      const qty = Number(entry.aplica) || 0;
+      if (qty <= 0) continue;
+      linhas.push(`${effect.name}${qty > 1 ? ` ×${qty}` : ''}`);
+    } else if (entry.aplica) {
+      linhas.push(effect.name);
+    }
+  }
+
+  const ajuste = Number(configuration?.ajustecusto);
+  if (Number.isFinite(ajuste) && ajuste !== 0) {
+    linhas.push(`Ajuste manual de custo: ${ajuste > 0 ? '+' : ''}${ajuste} PM`);
+  }
+
+  if (!linhas.length) return '';
+  const itens = linhas.map(l => `<li>${l}</li>`).join('');
+  return `<p><strong>Aprimoramentos aplicados (comprados na loja):</strong></p><ul>${itens}</ul><hr>`;
+}
+
+/**
+ * Monta os dados de um item consumível (pergaminho/poção) a partir do
+ * documento da magia de origem — mesma nomenclatura e ícone que o próprio
+ * Tormenta20 usa ao "Fabricar poção"/"Criar pergaminho": magias de área
+ * viram "Granada de X", magias de alvo em objeto viram "Óleo de X", as
+ * demais viram "Poção de X"; pergaminhos são sempre "Pergaminho de X".
+ *
+ * `contentDoc`, quando informado, é o item (temporário, já processado
+ * pelo diálogo de conjuração) de onde vêm as rolagens — os aprimoramentos
+ * escolhidos já ficam GRAVADOS no item criado (dano maior, etc.).
+ * `resolvedEffects`, quando informado, é `configuration.effects` do MESMO
+ * diálogo: os efeitos passivos/temporários que a magia normalmente aplica
+ * ao ser conjurada (ex.: uma condição, um bônus), já reconstruídos com as
+ * mudanças dos aprimoramentos marcados — exatamente o que o próprio botão
+ * "Fabricar Poção" do sistema copia para a poção (`options.effects.map(e
+ * => e[0])`). Sem isso, a poção perderia os efeitos que a magia deveria
+ * causar ao ser usada. `sourceDoc` continua sendo a magia original, usada
+ * para nome/UUID.
+ */
+function buildSpellConsumableData(sourceDoc, {
+  forma, pm, qty, contentDoc = null, resolvedEffects = null, aprimoramentosHtml = '', configSignature = '',
+}) {
+  const doc = contentDoc ?? sourceDoc;
+  const isPergaminho = forma === 'pergaminho';
+  let subtipo = 'Pergaminho';
+  let icon = 'pergaminho';
+  if (!isPergaminho) {
+    if (doc.system?.area) {
+      subtipo = 'Granada';
+      icon = 'pocao-granada';
+    } else if (/objeto/i.test(doc.system?.alvo ?? '')) {
+      subtipo = 'Óleo';
+      icon = 'pocao-oleo';
+    } else {
+      subtipo = 'Poção';
+      icon = 'pocao';
+    }
+  }
+
+  const unitPreco = spellConsumablePrice(pm);
+  const itemData = doc.toObject();
+  delete itemData._id;
+  delete itemData.stats;
+  itemData.type = 'consumivel';
+  itemData.name = `${subtipo} de ${sourceDoc.name}`;
+  itemData.img = `systems/tormenta20/icons/itens/itens-magicos/${icon}.webp`;
+  itemData.system.qtd = qty;
+  itemData.system.espacos = 0.5;
+  itemData.system.preco = unitPreco;
+  itemData.system.ativacao.custo = 0;
+  itemData.system.tipo = isPergaminho ? 'scroll' : 'potion';
+  // Os efeitos crus do item (as escolhas de aprimoramento em si) não fazem
+  // sentido num consumível pronto — trocamos pelos efeitos JÁ RESOLVIDOS
+  // (passivos/temporários da magia, com os aprimoramentos aplicados), do
+  // mesmo jeito que o "Fabricar Poção" nativo do sistema faz.
+  if (resolvedEffects) itemData.effects = resolvedEffects.map(efs => efs[0]);
+  if (aprimoramentosHtml) {
+    itemData.system.description ??= {};
+    itemData.system.description.value = `${aprimoramentosHtml}${itemData.system.description.value ?? ''}`;
+  }
+
+  const dedupeKey = `${sourceDoc.uuid}::${itemData.system.tipo}::${configSignature || pm}`;
+  return { itemData, unitPreco, dedupeKey, subtipo };
 }
 
 function isConsumableType(type, system = {}) {
@@ -98,6 +217,7 @@ function normalizeText(value) {
 }
 
 function getMainCategoryTag(itemType) {
+  if (isSpellType(itemType)) return 'cat:magia';
   const label = (typeLabel(itemType) || '').toLowerCase();
   if (label === 'arma') return 'cat:arma';
   if (label === 'consumível') return 'cat:consumivel';
@@ -178,6 +298,17 @@ function buildFilterTags(doc) {
     const consumableType = normalizeText(system.tipo?.value ?? system.tipo);
     const consumableCode = CONSUMABLE_TYPES.find(code => consumableType.includes(code));
     if (consumableCode) tags.add(`cons:${consumableCode}`);
+  }
+
+  if (mainTag === 'cat:magia') {
+    const circulo = Number(system.circulo) || 0;
+    if (SPELL_CIRCLES.includes(circulo)) tags.add(`circulo:${circulo}`);
+
+    const escola = normalizeCodes(system.escola?.value ?? system.escola)[0];
+    if (escola && SPELL_SCHOOLS.includes(escola)) tags.add(`escola:${escola}`);
+
+    const spellType = normalizeCodes(system.tipo?.value ?? system.tipo)[0];
+    if (spellType && SPELL_TYPE_CODES.includes(spellType)) tags.add(`stipo:${spellType}`);
   }
 
   return Array.from(tags);
@@ -421,12 +552,24 @@ export function shopItemsCacheReady() {
 
 /** Formata um documento Item para o formato interno da loja. */
 function formatItem(doc) {
-  const preco = Number(doc.system?.preco) || 0;
+  const isSpell = isSpellType(doc.type);
   const espacosBase = Number(doc.system?.espacos) || 0;
   const qtd = Number(doc.system?.qtd) || 1;
   const espacos = espacosBase * qtd;
   const filterTags = buildFilterTags(doc);
   const label = typeLabel(doc.type);
+
+  let preco, precoDisplayText, spellCirculo = null, spellCustoPM = null;
+  if (isSpell) {
+    spellCirculo = Number(doc.system?.circulo) || 0;
+    spellCustoPM = Math.max(1, Number(doc.system?.ativacao?.custo) || 0);
+    preco = spellConsumablePrice(spellCustoPM);
+    precoDisplayText = `A partir de ${precoDisplay(preco)}`;
+  } else {
+    preco = Number(doc.system?.preco) || 0;
+    precoDisplayText = precoDisplay(preco);
+  }
+
   return {
     uuid        : doc.uuid,
     name        : doc.name,
@@ -434,10 +577,13 @@ function formatItem(doc) {
     type        : doc.type,
     typeLabel   : label,
     preco,
-    precoDisplay: precoDisplay(preco),
+    precoDisplay: precoDisplayText,
     espacos,
     filterTags,
     source      : doc.system?.source ?? '',
+    isSpell,
+    spellCirculo,
+    spellCustoPM,
     // Busca pré-normalizada UMA vez na construção do cache — antes o
     // NFD+regex rodava sobre milhares de nomes a cada tecla digitada
     searchName  : normalizeText(doc.name),
@@ -452,8 +598,10 @@ async function buildShopItems() {
 
   const addItem = (doc) => {
     if (!doc) return;
-    const preco = doc.system?.preco;
-    if (preco === undefined || preco === null || preco === '' || Number(preco) <= 0) return;
+    if (!isSpellType(doc.type)) {
+      const preco = doc.system?.preco;
+      if (preco === undefined || preco === null || preco === '' || Number(preco) <= 0) return;
+    }
     const uuid = doc.uuid ?? doc.id;
     if (seen.has(uuid)) return;
     seen.add(uuid);
@@ -579,6 +727,7 @@ export class ShopApplication extends Application {
     this._sellPercent = 50;
     this._buyPercent = 100;
     this._affordableOnly = true;
+    this._hideSpells = false;
     this._filterTags = new Set();
     this._filterMatch = 'any';
     this._openFilterGroups = new Set();
@@ -655,9 +804,10 @@ export class ShopApplication extends Application {
       totalItems = sellFiltered.length;
     } else {
       // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado
-      const filtered = this._applyFilters(this._getSortedAll());
-      // O contador sempre reflete o filtro de busca/tipo/tags (como antes,
-      // sem considerar o "posso pagar")
+      let filtered = this._applyFilters(this._getSortedAll());
+      if (this._hideSpells) filtered = filtered.filter(item => !item.isSpell);
+      // O contador sempre reflete o filtro de busca/tipo/tags/magias (como
+      // antes, sem considerar o "posso pagar")
       totalItems = filtered.length;
       // Percentual de preço do modo compra (desconto/acréscimo do mestre)
       const fator = this._buyPercent / 100;
@@ -669,7 +819,7 @@ export class ShopApplication extends Application {
       items = visiveis.map(item => ({
         ...item,
         canAfford : totalCopper >= custoCobre(item),
-        ...(fator !== 1 ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
+        ...(fator !== 1 && !item.isSpell ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
       }));
     }
 
@@ -692,6 +842,7 @@ export class ShopApplication extends Application {
       sellPercent: this._sellPercent,
       buyPercent : this._buyPercent,
       affordableOnly: this._affordableOnly,
+      hideSpells : this._hideSpells,
       filterMatch: this._filterMatch,
     };
   }
@@ -800,6 +951,141 @@ export class ShopApplication extends Application {
 
       dialog.render(true);
     });
+  }
+
+  /** Escolha inicial: pergaminho (versão padrão) ou poção (com aprimoramentos). */
+  async _promptSpellForm(shopItem) {
+    return new Promise(resolve => {
+      new Dialog({
+        title: `Comprar ${shopItem.name}`,
+        content: `
+          <div class="t20-loja-spell-dialog">
+            <p class="spell-dialog-hint">Magia de ${shopItem.spellCirculo}º círculo — custo base ${shopItem.spellCustoPM} PM.</p>
+            <p>Comprar como pergaminho (versão padrão) ou poção (permite escolher aprimoramentos)?</p>
+          </div>
+        `,
+        buttons: {
+          pocao: {
+            icon: '<i class="fas fa-flask"></i>',
+            label: 'Poção',
+            callback: () => resolve('pocao'),
+          },
+          pergaminho: {
+            icon: '<i class="fas fa-scroll"></i>',
+            label: 'Pergaminho',
+            callback: () => resolve('pergaminho'),
+          },
+        },
+        default: 'pocao',
+        close: () => resolve(null),
+      }).render(true);
+    });
+  }
+
+  /**
+   * Abre o MESMO diálogo que o sistema Tormenta20 usa para conjurar a magia
+   * (`AbilityUseDialog`), sobre uma cópia temporária e não persistida do
+   * item pertencente ao ator comprador — assim os aprimoramentos
+   * estruturados (efeitos "ao usar") e os efeitos do próprio personagem
+   * aparecem exatamente como apareceriam ao lançar a magia de verdade.
+   * `applyOnUseEffects` (chamado pelo próprio diálogo) já grava os
+   * aprimoramentos marcados diretamente nas rolagens do item temporário —
+   * é esse item (já com tudo aplicado) que vira a poção, então usá-la
+   * depois não pergunta os aprimoramentos de novo, só rola com tudo já
+   * incluso.
+   * @returns {Promise<{tempItem:Item, configuration:object, pm:number}|null>} null se cancelado.
+   */
+  async _resolveSpellAprimoramentos(sourceDoc) {
+    const baseCusto = Number(sourceDoc.system?.ativacao?.custo) || 0;
+    const AbilityUseDialogCls = game.tormenta20?.applications?.AbilityUseDialog;
+    if (!AbilityUseDialogCls) {
+      console.warn(`${MODULE_ID} | AbilityUseDialog do Tormenta20 não encontrado; usando custo base da magia.`);
+      return { tempItem: null, configuration: null, pm: Math.max(1, baseCusto) };
+    }
+
+    const itemData = sourceDoc.toObject();
+    delete itemData._id;
+    const tempItem = new CONFIG.Item.documentClass(itemData, { parent: this.actor });
+
+    const configuration = await AbilityUseDialogCls.create(tempItem);
+    if (!configuration) return null;
+
+    // O ajuste manual de custo (campo de texto livre, usado para
+    // aprimoramentos apenas descritos no texto da magia) não é aplicado
+    // pelo sistema — somamos aqui só para a precificação.
+    const custoConfigurado = Number(tempItem.system?.ativacao?.custo);
+    const ajuste = Number(configuration.ajustecusto);
+    const total = (Number.isFinite(custoConfigurado) ? custoConfigurado : baseCusto)
+      + (Number.isFinite(ajuste) ? ajuste : 0);
+    return { tempItem, configuration, pm: Math.max(1, total) };
+  }
+
+  /**
+   * Fluxo completo de configuração de compra de uma magia: forma
+   * (poção/pergaminho), aprimoramentos (só poção) e quantidade. Usado
+   * tanto pela compra direta quanto por "adicionar ao carrinho". Já
+   * devolve o `itemData` pronto para criar no ator — com os
+   * aprimoramentos gravados nas rolagens (poção) e anotados na descrição.
+   * @returns {Promise<{forma:string, pm:number, qty:number, unitPrice:number, itemData:object, dedupeKey:string, subtipo:string}|null>}
+   */
+  async _configureSpellPurchase(shopItem, { cart = false } = {}) {
+    const forma = await this._promptSpellForm(shopItem);
+    if (!forma) return null;
+
+    let sourceDoc;
+    try {
+      sourceDoc = await fromUuid(shopItem.uuid);
+    } catch (e) {
+      ui.notifications.error(`Não foi possível carregar a magia: ${shopItem.uuid}`);
+      return null;
+    }
+    if (!sourceDoc) {
+      ui.notifications.error('Magia não encontrada no compêndio.');
+      return null;
+    }
+
+    let pm = shopItem.spellCustoPM;
+    let contentDoc = null;
+    let resolvedEffects = null;
+    let aprimoramentosHtml = '';
+    let configSignature = '';
+
+    if (forma === 'pocao') {
+      const resolved = await this._resolveSpellAprimoramentos(sourceDoc);
+      if (!resolved) return null;
+      pm = resolved.pm;
+      if (resolved.tempItem) {
+        contentDoc = resolved.tempItem;
+        // Efeitos passivos/temporários que a magia normalmente aplica ao
+        // ser conjurada (condições, bônus...), já reconstruídos com os
+        // aprimoramentos marcados — mesma fonte que o "Fabricar Poção"
+        // nativo do sistema usa.
+        resolvedEffects = resolved.configuration?.effects ?? [];
+        aprimoramentosHtml = describeAprimoramentosHtml(resolved.tempItem, resolved.configuration);
+        configSignature = JSON.stringify({
+          aprs: resolved.configuration?.aprs ?? {},
+          ajuste: resolved.configuration?.ajustecusto ?? '',
+        });
+      }
+    }
+
+    const unitPrice = spellConsumablePrice(pm);
+    const qty = await this._promptQuantity({
+      title: cart ? `Adicionar ${shopItem.name} ao carrinho` : `Comprar ${shopItem.name}`,
+      unitPrice,
+      max: 999,
+      percent: 1,
+      label: forma === 'pocao'
+        ? `Selecione a quantidade de poções (${pm} PM investidos no total).`
+        : 'Selecione a quantidade de pergaminhos (versão padrão da magia).',
+    });
+    if (!qty) return null;
+
+    const { itemData, dedupeKey, subtipo } = buildSpellConsumableData(sourceDoc, {
+      forma, pm, qty, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature,
+    });
+
+    return { forma, pm, qty, unitPrice, itemData, dedupeKey, subtipo };
   }
 
   async _promptCraft({ title, unitPrice }) {
@@ -1051,6 +1337,83 @@ export class ShopApplication extends Application {
     this.render();
   }
 
+  /**
+   * Compra uma magia como item consumível: o comprador escolhe pergaminho
+   * (versão padrão) ou poção (com aprimoramentos escolhidos no próprio
+   * diálogo de conjuração do sistema), depois a quantidade — e a compra é
+   * concluída como qualquer outra.
+   */
+  async _purchaseSpell(uuid) {
+    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+
+    const config = await this._configureSpellPurchase(shopItem);
+    if (!config) return;
+    const { forma, pm, qty, unitPrice, itemData, dedupeKey, subtipo } = config;
+    const isPergaminho = forma === 'pergaminho';
+
+    const fatorPreco = this._buyPercent / 100;
+    const costCopper = Math.round(unitPrice * qty * fatorPreco * 10);
+
+    const wealth = this._wealthInfo();
+    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
+
+    if (totalCopper < costCopper) {
+      return ui.notifications.warn(
+        `${this.actor.name} não tem moedas suficientes para comprar "${shopItem.name}"!`
+      );
+    }
+
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
+
+    // Dedup: só empilha com um item já comprado com a MESMA configuração
+    // (forma + aprimoramentos escolhidos) — uma poção com aprimoramentos
+    // diferentes é um item diferente, mesmo vindo da mesma magia.
+    const existing = this.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === dedupeKey);
+
+    if (existing && existing.system?.qtd !== undefined) {
+      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+    } else {
+      const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
+      if (created) {
+        await created.setFlag(MODULE_ID, 'sourceUuid', uuid);
+        await created.setFlag(MODULE_ID, 'spellDedupeKey', dedupeKey);
+      }
+    }
+
+    await this.actor.update({
+      'system.dinheiro.to': newTo,
+      'system.dinheiro.tp': newTp,
+      'system.dinheiro.tc': newTc,
+    }, { t20lojaInterno: true });
+
+    const messageContent = cartaoLoja({
+      icone: isPergaminho ? 'fa-scroll' : 'fa-flask',
+      titulo: this._buyPercent === 100
+        ? `comprou ${subtipo.toLowerCase()} de magia na loja`
+        : `comprou ${subtipo.toLowerCase()} de magia na loja (${this._buyPercent}% do preço)`,
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item"><img src="${itemData.img}" alt="" />${itemData.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
+        ${!isPergaminho ? linhaCartao('PM investido', `<b>${pm} PM</b>`) : ''}
+        ${linhaCartao('Preço', `<b>${precoDisplay(unitPrice * fatorPreco)}</b>${qty > 1 ? ` <small>cada</small>` : ''}`)}
+        ${linhaPagamento(pago)}
+        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
+
+    if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: messageContent,
+        whisper: getChatRecipients(),
+      });
+    }
+
+    this.render();
+  }
+
   async _sellItem(itemId) {
     const item = this.actor.items.get(itemId);
     if (!item) return ui.notifications.error('Item não encontrado no inventário.');
@@ -1120,6 +1483,7 @@ export class ShopApplication extends Application {
   async _addToCart(uuid) {
     const shopItem = this._allItems.find(i => i.uuid === uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+    if (shopItem.isSpell) return this._addSpellToCart(uuid);
 
     let qty = 1;
     if (isConsumableType(shopItem.type, shopItem.system ?? {})) {
@@ -1139,11 +1503,47 @@ export class ShopApplication extends Application {
       existing.qty += qty;
     } else {
       this._cartItems.set(uuid, {
+        key: uuid,
         uuid,
         name: shopItem.name,
         img: shopItem.img,
         preco: shopItem.preco,
         qty,
+      });
+    }
+
+    this._openCart();
+  }
+
+  /** Adiciona uma magia (poção/pergaminho já configurados) ao carrinho. */
+  async _addSpellToCart(uuid) {
+    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+
+    const config = await this._configureSpellPurchase(shopItem, { cart: true });
+    if (!config) return;
+    const { forma, pm, qty, unitPrice, itemData, dedupeKey, subtipo } = config;
+    const cartKey = `spell::${dedupeKey}`;
+
+    const existing = this._cartItems.get(cartKey);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      this._cartItems.set(cartKey, {
+        key: cartKey,
+        uuid,
+        name: itemData.name,
+        img: itemData.img,
+        preco: unitPrice,
+        qty,
+        isSpell: true,
+        spellForma: forma,
+        spellPM: pm,
+        spellSubtipo: subtipo,
+        spellDedupeKey: dedupeKey,
+        // Item já pronto (aprimoramentos gravados) — no checkout só
+        // ajustamos a quantidade final antes de criar/empilhar.
+        spellItemData: itemData,
       });
     }
 
@@ -1590,6 +1990,12 @@ export class ShopApplication extends Application {
       this._purchaseItem(uuid);
     });
 
+    // Botão Comprar (magia — abre escolha de poção/pergaminho)
+    html.find('.btn-buy-spell').on('click', ev => {
+      const uuid = ev.currentTarget.dataset.uuid;
+      this._purchaseSpell(uuid);
+    });
+
     // Botão Carrinho
     html.find('.btn-cart').on('click', ev => {
       const uuid = ev.currentTarget.dataset.uuid;
@@ -1692,6 +2098,57 @@ export class ShopApplication extends Application {
       const key = el.dataset.group;
       if (!key) return;
       el.open = this._openFilterGroups.has(key);
+      // A seta (::before) segue esta classe, não o atributo [open] — assim
+      // ela pode "virar" antes do atributo mudar de fato (ver animação
+      // de expandir/recolher logo abaixo).
+      el.classList.toggle('t20l-open', el.open);
+    });
+
+    // Expandir/recolher animado dos grupos de filtro: <details> não anima
+    // altura nativamente, então a transição é feita "na mão" com a Web
+    // Animations API, animando o painel de 0 até sua altura natural (e
+    // vice-versa) em vez do salto instantâneo padrão do navegador.
+    html.find('.side-filter-group').each((_, groupEl) => {
+      const summaryEl = groupEl.querySelector(':scope > summary');
+      const panelEl = groupEl.querySelector(':scope > .filter-options');
+      if (!summaryEl || !panelEl) return;
+
+      summaryEl.addEventListener('click', ev => {
+        ev.preventDefault();
+        groupEl._t20Anim?.cancel();
+
+        if (!groupEl.open) {
+          groupEl.classList.add('t20l-open');
+          groupEl.open = true;
+          const target = panelEl.scrollHeight;
+          panelEl.style.overflow = 'hidden';
+          panelEl.style.height = '0px';
+          groupEl._t20Anim = panelEl.animate(
+            [{ height: '0px' }, { height: `${target}px` }],
+            { duration: 180, easing: 'ease-out' }
+          );
+          groupEl._t20Anim.onfinish = () => {
+            panelEl.style.removeProperty('height');
+            panelEl.style.removeProperty('overflow');
+            groupEl._t20Anim = null;
+          };
+        } else {
+          groupEl.classList.remove('t20l-open');
+          const start = panelEl.scrollHeight;
+          panelEl.style.overflow = 'hidden';
+          panelEl.style.height = `${start}px`;
+          groupEl._t20Anim = panelEl.animate(
+            [{ height: `${start}px` }, { height: '0px' }],
+            { duration: 150, easing: 'ease-in' }
+          );
+          groupEl._t20Anim.onfinish = () => {
+            groupEl.open = false;
+            panelEl.style.removeProperty('height');
+            panelEl.style.removeProperty('overflow');
+            groupEl._t20Anim = null;
+          };
+        }
+      });
     });
 
     html.find(`input[name="shop-filter-match"][value="${this._filterMatch}"]`).prop('checked', true);
@@ -1747,6 +2204,12 @@ export class ShopApplication extends Application {
     // Filtro de itens acessíveis
     html.find('.shop-affordable-only').on('change', ev => {
       this._affordableOnly = ev.currentTarget.checked;
+      this.render();
+    });
+
+    // Não exibir magias
+    html.find('.shop-hide-spells').on('change', ev => {
+      this._hideSpells = ev.currentTarget.checked;
       this.render();
     });
 
@@ -1811,15 +2274,15 @@ class CartApplication extends Application {
     aplicarTemaLoja(this, this.shopApp.actor);
 
     html.find('.btn-remove-cart-item').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      if (!uuid) return;
-      this.shopApp._cartItems.delete(uuid);
+      const key = ev.currentTarget.dataset.key;
+      if (!key) return;
+      this.shopApp._cartItems.delete(key);
       this.render();
     });
 
     html.find('.cart-qty-input').on('input', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      const item = this.shopApp._cartItems.get(uuid);
+      const key = ev.currentTarget.dataset.key;
+      const item = this.shopApp._cartItems.get(key);
       if (!item) return;
       const value = Math.max(1, Number(ev.currentTarget.value) || 1);
       item.qty = value;
@@ -1889,6 +2352,30 @@ class CartApplication extends Application {
     const purchasedLines = [];
 
     for (const item of items) {
+      // O item da magia já foi montado (aprimoramentos gravados nas
+      // rolagens) no momento em que foi adicionado ao carrinho — só falta
+      // ajustar a quantidade final escolhida aqui.
+      if (item.isSpell) {
+        const itemData = foundry.utils.deepClone(item.spellItemData);
+        itemData.system.qtd = item.qty;
+        const existing = this.shopApp.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === item.spellDedupeKey);
+        if (existing && existing.system?.qtd !== undefined) {
+          await existing.update({ 'system.qtd': (existing.system.qtd || 1) + item.qty });
+        } else {
+          const [created] = await this.shopApp.actor.createEmbeddedDocuments('Item', [itemData]);
+          if (created) {
+            await created.setFlag(MODULE_ID, 'sourceUuid', item.uuid);
+            await created.setFlag(MODULE_ID, 'spellDedupeKey', item.spellDedupeKey);
+          }
+        }
+        purchasedLines.push({
+          name: itemData.name,
+          qty: item.qty,
+          paid: precoDisplay(item.preco * item.qty * (this._discountPercent / 100)),
+        });
+        continue;
+      }
+
       let sourceDoc;
       try {
         sourceDoc = await fromUuid(item.uuid);

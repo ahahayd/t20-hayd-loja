@@ -50,6 +50,10 @@
           <input type="checkbox" class="shop-affordable-only" {{#if affordableOnly}}checked{{/if}}>
           <span>Somente itens que posso comprar</span>
         </label>
+        <label class="checkbox">
+          <input type="checkbox" class="shop-hide-spells" {{#if hideSpells}}checked{{/if}}>
+          <span>Não exibir magias</span>
+        </label>
       </div>
       <div class="filter-group sell-percent-group buy-percent-group">
         <label>Preço</label>
@@ -199,6 +203,46 @@
           </div>
         </div>
       </details>
+
+      <details class="side-filter-group" data-group="spells">
+        <summary>
+          <span>Magias</span>
+          <label class="filter-option filter-option-inline">
+            <input type="checkbox" class="shop-filter-checkbox" data-tag="cat:magia">
+          </label>
+        </summary>
+        <div class="filter-options">
+          <div class="filter-subgroup">
+            <div class="filter-subtitle">Círculo</div>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="circulo:1"><span>1º Círculo</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="circulo:2"><span>2º Círculo</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="circulo:3"><span>3º Círculo</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="circulo:4"><span>4º Círculo</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="circulo:5"><span>5º Círculo</span></label>
+          </div>
+
+          <div class="filter-subgroup">
+            <div class="filter-subtitle">Escola</div>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:abj"><span>Abjuração</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:adv"><span>Adivinhação</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:con"><span>Convocação</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:enc"><span>Encantamento</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:evo"><span>Evocação</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:ilu"><span>Ilusão</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:nec"><span>Necromancia</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="escola:tra"><span>Transmutação</span></label>
+          </div>
+
+          <div class="filter-subgroup">
+            <div class="filter-subtitle">Tipo</div>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="stipo:arc"><span>Arcana</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="stipo:div"><span>Divina</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="stipo:uni"><span>Universal (ambas)</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="stipo:eng"><span>Engenhoca</span></label>
+            <label class="filter-option"><input type="checkbox" class="shop-filter-checkbox" data-tag="stipo:sim"><span>Simulada</span></label>
+          </div>
+        </div>
+      </details>
     </aside>
 
     {{!-- ── Lista de itens ── --}}
@@ -234,7 +278,7 @@
               {{#if source}}<span class="item-source">{{source}}</span>{{/if}}
             </td>
             <td class="col-type"><span class="type-badge">{{typeLabel}}</span></td>
-            <td class="col-weight">{{espacos}} Esp.</td>
+            <td class="col-weight">{{#if isSpell}}—{{else}}{{espacos}} Esp.{{/if}}</td>
             <td class="col-price">
               <span class="price-tag {{#if (eq ../mode "buy")}}{{#unless canAfford}}too-expensive{{/unless}}{{/if}}">
                 {{#if (eq ../mode "sell")}}
@@ -249,6 +293,18 @@
                 <button class="btn-sell" data-item-id="{{itemId}}" title="Vender {{name}}">
                   <i class="fas fa-hand-holding-usd"></i>
                 </button>
+              {{else if isSpell}}
+                <div class="buy-actions">
+                  <button class="btn-buy-spell {{#unless canAfford}}disabled{{/unless}}"
+                          data-uuid="{{uuid}}"
+                          {{#unless canAfford}}disabled title="Sem moedas suficientes"{{/unless}}
+                          title="Comprar {{name}} (poção ou pergaminho)">
+                    <i class="fas fa-hat-wizard"></i>
+                  </button>
+                  <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar {{name}} ao carrinho">
+                    <i class="fas fa-cart-plus"></i>
+                  </button>
+                </div>
               {{else}}
                 <div class="buy-actions">
                   <button class="btn-buy btn-buy-small {{#unless canAfford}}disabled{{/unless}}"
