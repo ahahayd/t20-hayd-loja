@@ -1021,14 +1021,14 @@ export class ShopApplication extends Application {
   }
 
   /**
-   * Fluxo completo de configuração de compra de uma magia: forma
-   * (poção/pergaminho), aprimoramentos (só poção) e quantidade. Usado
-   * tanto pela compra direta quanto por "adicionar ao carrinho". Já
-   * devolve o `itemData` pronto para criar no ator — com os
-   * aprimoramentos gravados nas rolagens (poção) e anotados na descrição.
-   * @returns {Promise<{forma:string, pm:number, qty:number, unitPrice:number, itemData:object, dedupeKey:string, subtipo:string}|null>}
+   * Resolve forma (poção/pergaminho) e, no caso de poção, os
+   * aprimoramentos escolhidos via `AbilityUseDialog` — a parte do fluxo
+   * de compra/fabricação de magias que independe de preço/quantidade.
+   * Compartilhado por `_configureSpellPurchase` (compra) e
+   * `_configureSpellCraft` (fabricação).
+   * @returns {Promise<{forma:string, sourceDoc:Item, pm:number, contentDoc:Item|null, resolvedEffects:any, aprimoramentosHtml:string, configSignature:string}|null>}
    */
-  async _configureSpellPurchase(shopItem, { cart = false } = {}) {
+  async _resolveSpellBase(shopItem) {
     const forma = await this._promptSpellForm(shopItem);
     if (!forma) return null;
 
@@ -1069,6 +1069,22 @@ export class ShopApplication extends Application {
       }
     }
 
+    return { forma, sourceDoc, pm, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature };
+  }
+
+  /**
+   * Fluxo completo de configuração de compra de uma magia: forma
+   * (poção/pergaminho), aprimoramentos (só poção) e quantidade. Usado
+   * tanto pela compra direta quanto por "adicionar ao carrinho". Já
+   * devolve o `itemData` pronto para criar no ator — com os
+   * aprimoramentos gravados nas rolagens (poção) e anotados na descrição.
+   * @returns {Promise<{forma:string, pm:number, qty:number, unitPrice:number, itemData:object, dedupeKey:string, subtipo:string}|null>}
+   */
+  async _configureSpellPurchase(shopItem, { cart = false } = {}) {
+    const base = await this._resolveSpellBase(shopItem);
+    if (!base) return null;
+    const { forma, sourceDoc, pm, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature } = base;
+
     const unitPrice = spellConsumablePrice(pm);
     const qty = await this._promptQuantity({
       title: cart ? `Adicionar ${shopItem.name} ao carrinho` : `Comprar ${shopItem.name}`,
@@ -1086,6 +1102,34 @@ export class ShopApplication extends Application {
     });
 
     return { forma, pm, qty, unitPrice, itemData, dedupeKey, subtipo };
+  }
+
+  /**
+   * Fluxo completo de FABRICAÇÃO de uma magia como poção/pergaminho: mesma
+   * escolha de forma/aprimoramentos de `_configureSpellPurchase`, mas a
+   * quantidade e o preço usam o diálogo de fabricação (`_promptCraft`) —
+   * fração do preço base + desconto por matéria-prima —, igual ao que
+   * `_craftItem` já faz para itens normais.
+   * @returns {Promise<{forma:string, pm:number, qty:number, unitPrice:number, fraction:number, fractionLabel:string, materialDiscount:number, itemData:object, dedupeKey:string, subtipo:string}|null>}
+   */
+  async _configureSpellCraft(shopItem) {
+    const base = await this._resolveSpellBase(shopItem);
+    if (!base) return null;
+    const { forma, sourceDoc, pm, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature } = base;
+
+    const unitPrice = spellConsumablePrice(pm);
+    const craftData = await this._promptCraft({
+      title: `Construir ${shopItem.name}`,
+      unitPrice,
+    });
+    if (!craftData) return null;
+    const { qty, fraction, fractionLabel, materialDiscount } = craftData;
+
+    const { itemData, dedupeKey, subtipo } = buildSpellConsumableData(sourceDoc, {
+      forma, pm, qty, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature,
+    });
+
+    return { forma, pm, qty, unitPrice, fraction, fractionLabel, materialDiscount, itemData, dedupeKey, subtipo };
   }
 
   async _promptCraft({ title, unitPrice }) {
@@ -1640,6 +1684,92 @@ export class ShopApplication extends Application {
     this.render();
   }
 
+  /**
+   * Fabrica uma magia como poção/pergaminho por uma fração do preço (mais
+   * desconto de matéria-prima), em vez de comprá-la pelo preço cheio —
+   * equivalente ao "Construir" (`_craftItem`) dos itens normais, mas
+   * passando primeiro pela escolha de forma/aprimoramentos das magias.
+   */
+  async _craftSpell(uuid) {
+    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+
+    const config = await this._configureSpellCraft(shopItem);
+    if (!config) return;
+    const { forma, pm, qty, unitPrice, fraction, fractionLabel, materialDiscount, itemData, dedupeKey, subtipo } = config;
+    const isPergaminho = forma === 'pergaminho';
+
+    const formatCraftCost = costCopper => {
+      if (costCopper <= 0) return 'Grátis';
+      if (costCopper < 10) return `${costCopper} TC`;
+      return precoDisplay(costCopper / 10);
+    };
+
+    const unitCostCopper = Math.max(1, Math.floor(unitPrice * fraction * 10));
+    const totalCostCopper = Math.max(0, (unitCostCopper * qty) - Math.round(materialDiscount * 10));
+
+    const wealth = this._wealthInfo();
+    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
+    const costCopper = totalCostCopper;
+
+    if (totalCopper < costCopper) {
+      return ui.notifications.warn(
+        `${this.actor.name} não tem moedas suficientes para construir "${shopItem.name}"!`
+      );
+    }
+
+    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
+
+    // Mesmo dedup por configuração (forma + aprimoramentos) usado na
+    // compra — uma poção fabricada empilha com uma idêntica já comprada.
+    const existing = this.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === dedupeKey);
+
+    if (existing && existing.system?.qtd !== undefined) {
+      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+    } else {
+      const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
+      if (created) {
+        await created.setFlag(MODULE_ID, 'sourceUuid', uuid);
+        await created.setFlag(MODULE_ID, 'spellDedupeKey', dedupeKey);
+      }
+    }
+
+    await this.actor.update({
+      'system.dinheiro.to': newTo,
+      'system.dinheiro.tp': newTp,
+      'system.dinheiro.tc': newTc,
+    }, { t20lojaInterno: true });
+
+    const descontoCobre = Math.round(materialDiscount * 10);
+    const messageContent = cartaoLoja({
+      icone: 'fa-hammer',
+      titulo: `construiu ${subtipo.toLowerCase()} de magia (${fractionLabel} do preço)`,
+      ator: this.actor.name,
+      corpo: `
+        <div class="t20l-item"><img src="${itemData.img}" alt="" />${itemData.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
+        ${!isPergaminho ? linhaCartao('PM investido', `<b>${pm} PM</b>`) : ''}
+        ${linhaCartao('Custo por item', `<b>${formatCraftCost(unitCostCopper)}</b>`)}
+        ${linhaCartao('Desconto matéria-prima', descontoCobre > 0
+          ? `<b>${formatCraftCost(descontoCobre)}</b>`
+          : `<small class="t20l-nulo">Não houve</small>`)}
+        ${linhaCartao('Total pago', `<b>${formatCraftCost(totalCostCopper)}</b>`)}
+        ${linhaPagamento(pago)}
+        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
+      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
+      mostrarTl: atorUsaPlatina(this.actor)
+    });
+
+    if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: messageContent,
+        whisper: getChatRecipients(),
+      });
+    }
+
+    this.render();
+  }
+
   async _promptUpgrade() {
     return new Promise(resolve => {
       const fractions = [
@@ -2006,6 +2136,12 @@ export class ShopApplication extends Application {
     html.find('.btn-craft').on('click', ev => {
       const uuid = ev.currentTarget.dataset.uuid;
       this._craftItem(uuid);
+    });
+
+    // Botão Construir (magia — abre escolha de poção/pergaminho, depois fabricação)
+    html.find('.btn-craft-spell').on('click', ev => {
+      const uuid = ev.currentTarget.dataset.uuid;
+      this._craftSpell(uuid);
     });
 
     // Botão Vender
