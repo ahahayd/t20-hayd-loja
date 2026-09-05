@@ -2182,11 +2182,18 @@ export class ShopApplication extends Application {
       this.render();
     });
 
-    // Percentual de preço do modo compra (10%–200%, padrão 100%)
+    // Percentual de preço do modo compra (0%–200%, padrão 100%). O piso é
+    // 0 (não negativo) — com piso 10 antigo, digitar "20" ficava preso em
+    // "10" assim que o primeiro caractere ("2") era corrigido para cima a
+    // cada tecla. `value === ''`/NaN cai no padrão 100; um "0" explícito
+    // (dígito válido, só falsy em JS) precisa ser tratado à parte, senão
+    // `Number(value) || 100` também travaria "0" de volta em "100".
     const buyRange = html.find('.shop-buy-percent');
     const buyInput = html.find('.shop-buy-percent-input');
     const applyBuyPercent = value => {
-      const clamped = Math.min(200, Math.max(10, Number(value) || 100));
+      const num = Number(value);
+      const base = (value === '' || !Number.isFinite(num)) ? 100 : num;
+      const clamped = Math.min(200, Math.max(0, base));
       this._buyPercent = clamped;
       buyRange.val(clamped);
       buyInput.val(clamped);
