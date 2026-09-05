@@ -191,7 +191,48 @@ Hooks.once('init', () => {
     type: ShopSettingsApplication,
     restricted: true
   });
+
+  // Atalho de teclado para abrir a loja (padrão: tecla P). Usa o ator do
+  // token controlado, senão o personagem atribuído ao usuário — mesmo
+  // critério (system.dinheiro) do botão na ficha.
+  game.keybindings.register(MODULE_ID, 'openShop', {
+    name: 'Abrir Loja',
+    hint: 'Abre a loja para o token selecionado (ou para o personagem atribuído a você, se nenhum token estiver selecionado).',
+    editable: [{ key: 'KeyP' }],
+    onDown: () => {
+      const actor = actorParaAtalhoDaLoja();
+      if (!actor) {
+        ui.notifications.warn('Selecione um token ou tenha um personagem atribuído para abrir a loja.');
+        return true;
+      }
+      abrirLojaPara(actor);
+      return true;
+    },
+  });
 });
+
+/** Mesmo ator que o botão da ficha usaria: token controlado ou personagem
+ * atribuído ao usuário, desde que tenha sistema de dinheiro (jogável). */
+function actorParaAtalhoDaLoja() {
+  for (const token of canvas?.tokens?.controlled ?? []) {
+    if (token.actor?.system?.dinheiro) return token.actor;
+  }
+  const personagem = game.user?.character;
+  if (personagem?.system?.dinheiro) return personagem;
+  return null;
+}
+
+/** Abre a loja para o ator, reaproveitando a janela já aberta (se houver). */
+function abrirLojaPara(actor) {
+  const existing = Object.values(ui.windows).find(
+    w => w instanceof ShopApplication && w.actor.id === actor.id
+  );
+  if (existing) {
+    existing.bringToTop();
+  } else {
+    new ShopApplication(actor).render(true);
+  }
+}
 
 /* ─────────────────────────────────────────────
    READY — Pré-carrega os itens da loja
@@ -242,15 +283,7 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
   btn.on('click', ev => {
     ev.preventDefault();
     ev.stopPropagation();
-    // Reutiliza janela existente se já aberta para este ator
-    const existing = Object.values(ui.windows).find(
-      w => w instanceof ShopApplication && w.actor.id === actor.id
-    );
-    if (existing) {
-      existing.bringToTop();
-    } else {
-      new ShopApplication(actor).render(true);
-    }
+    abrirLojaPara(actor);
   });
 
   // Insere antes do botão de fechar
