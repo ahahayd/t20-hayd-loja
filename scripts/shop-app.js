@@ -2249,6 +2249,22 @@ export class ShopApplication extends Application {
       const panelEl = groupEl.querySelector(':scope > .filter-options');
       if (!summaryEl || !panelEl) return;
 
+      // O checkbox "marcar categoria inteira" mora DENTRO do <summary>. O
+      // <details> nativo alterna aberto/fechado em QUALQUER clique dentro
+      // do <summary> — mesmo em elementos interativos aninhados — e isso
+      // NÃO depende de nenhum handler nosso, então preventDefault() no
+      // listener do summary (abaixo) não adianta: ele cancelaria também o
+      // toggle nativo do PRÓPRIO checkbox (mesmo evento, mesmo
+      // defaultPrevented, revertido ao valor anterior depois do clique).
+      // stopPropagation() no wrapper do checkbox resolve os dois lados:
+      // impede o clique de alcançar o <summary> (então não abre/fecha o
+      // grupo) sem tocar no defaultPrevented (então o checkbox alterna
+      // normalmente e dispara "change" como qualquer checkbox).
+      const inlineCheckboxLabel = summaryEl.querySelector('.filter-option-inline');
+      if (inlineCheckboxLabel) {
+        inlineCheckboxLabel.addEventListener('click', ev => ev.stopPropagation());
+      }
+
       summaryEl.addEventListener('click', ev => {
         ev.preventDefault();
         groupEl._t20Anim?.cancel();
