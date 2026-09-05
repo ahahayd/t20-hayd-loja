@@ -18,66 +18,71 @@
 
   {{!-- ── Filtros ── --}}
   <div class="shop-filters">
-    <div class="filter-group shop-mode-toggle">
-      <button class="mode-btn {{#if (eq mode "buy")}}active{{/if}}" data-mode="buy" title="Comprar">
-        <i class="fas fa-store"></i>
-        <span>Comprar</span>
-      </button>
-      <button class="mode-btn {{#if (eq mode "sell")}}active{{/if}}" data-mode="sell" title="Vender">
-        <i class="fas fa-hand-holding-usd"></i>
-        <span>Vender</span>
-      </button>
-    </div>
+    <div class="shop-filters-row shop-filters-row-top">
+      <div class="filter-group shop-mode-toggle">
+        <button class="mode-btn {{#if (eq mode "buy")}}active{{/if}}" data-mode="buy" title="Comprar">
+          <i class="fas fa-store"></i>
+          <span>Comprar</span>
+        </button>
+        <button class="mode-btn {{#if (eq mode "sell")}}active{{/if}}" data-mode="sell" title="Vender">
+          <i class="fas fa-hand-holding-usd"></i>
+          <span>Vender</span>
+        </button>
+      </div>
 
-    <div class="filter-group">
-      <i class="fas fa-search"></i>
-      <input type="text" class="shop-search-input" placeholder="Buscar item…" value="{{search}}">
-    </div>
+      <div class="filter-group shop-search-group">
+        <i class="fas fa-search"></i>
+        <input type="text" class="shop-search-input" placeholder="Buscar item…" value="{{search}}">
+      </div>
 
-    <div class="filter-group">
-      <label>Ordenar</label>
-      <select class="shop-sort">
-        <option value="name"       {{#if (eq sortBy "name")}}selected{{/if}}>Nome</option>
-        <option value="price-asc"  {{#if (eq sortBy "price-asc")}}selected{{/if}}>Preço (menor)</option>
-        <option value="price-desc" {{#if (eq sortBy "price-desc")}}selected{{/if}}>Preço (maior)</option>
-        <option value="type"       {{#if (eq sortBy "type")}}selected{{/if}}>Tipo</option>
-      </select>
+      <div class="filter-group shop-sort-group">
+        <label>Ordenar</label>
+        <select class="shop-sort">
+          <option value="name"       {{#if (eq sortBy "name")}}selected{{/if}}>Nome</option>
+          <option value="price-asc"  {{#if (eq sortBy "price-asc")}}selected{{/if}}>Preço (menor)</option>
+          <option value="price-desc" {{#if (eq sortBy "price-desc")}}selected{{/if}}>Preço (maior)</option>
+          <option value="type"       {{#if (eq sortBy "type")}}selected{{/if}}>Tipo</option>
+        </select>
+      </div>
+
+      <span class="filter-count">{{totalItems}} ite{{#if (eq totalItems 1)}}m{{else}}ns{{/if}}</span>
     </div>
 
     {{#if (eq mode "buy")}}
-      <div class="filter-group shop-affordable-toggle">
-        <label class="checkbox">
-          <input type="checkbox" class="shop-affordable-only" {{#if affordableOnly}}checked{{/if}}>
-          <span>Somente itens que posso comprar</span>
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" class="shop-hide-spells" {{#if hideSpells}}checked{{/if}}>
-          <span>Não exibir magias</span>
-        </label>
-      </div>
-      <div class="filter-group sell-percent-group buy-percent-group">
-        <label>Preço</label>
-        <button type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
-        <input type="range" class="shop-buy-percent" min="10" max="200" step="1" value="{{buyPercent}}">
-        <button type="button" class="pct-step buy-pct-step" data-step="10" title="+10%">+10</button>
-        <input type="number" class="shop-buy-percent-input" min="10" max="200" step="1" value="{{buyPercent}}">
-        <span class="sell-percent-label">%</span>
+      <div class="shop-filters-row shop-filters-row-options">
+        <div class="filter-group shop-affordable-toggle">
+          <label class="checkbox">
+            <input type="checkbox" class="shop-affordable-only" {{#if affordableOnly}}checked{{/if}}>
+            <span>Somente itens que posso comprar</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" class="shop-hide-spells" {{#if hideSpells}}checked{{/if}}>
+            <span>Não exibir magias</span>
+          </label>
+        </div>
+        <div class="filter-group sell-percent-group buy-percent-group">
+          <label>Preço</label>
+          <button type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
+          <input type="range" class="shop-buy-percent" min="10" max="200" step="1" value="{{buyPercent}}">
+          <button type="button" class="pct-step buy-pct-step" data-step="10" title="+10%">+10</button>
+          <input type="number" class="shop-buy-percent-input" min="10" max="200" step="1" value="{{buyPercent}}">
+          <span class="sell-percent-label">%</span>
+        </div>
       </div>
     {{/if}}
 
     {{#if (eq mode "sell")}}
-      <div class="filter-group sell-percent-group">
-        <label>Venda</label>
-        <button type="button" class="pct-step sell-pct-step" data-step="-10" title="−10%">−10</button>
-        <input type="range" class="shop-sell-percent" min="1" max="100" step="1" value="{{sellPercent}}">
-        <button type="button" class="pct-step sell-pct-step" data-step="10" title="+10%">+10</button>
-        <input type="number" class="shop-sell-percent-input" min="1" max="100" step="1" value="{{sellPercent}}">
-        <span class="sell-percent-label">%</span>
+      <div class="shop-filters-row shop-filters-row-options">
+        <div class="filter-group sell-percent-group">
+          <label>Venda</label>
+          <button type="button" class="pct-step sell-pct-step" data-step="-10" title="−10%">−10</button>
+          <input type="range" class="shop-sell-percent" min="1" max="100" step="1" value="{{sellPercent}}">
+          <button type="button" class="pct-step sell-pct-step" data-step="10" title="+10%">+10</button>
+          <input type="number" class="shop-sell-percent-input" min="1" max="100" step="1" value="{{sellPercent}}">
+          <span class="sell-percent-label">%</span>
+        </div>
       </div>
     {{/if}}
-
-
-    <span class="filter-count">{{totalItems}} ite{{#if (eq totalItems 1)}}m{{else}}ns{{/if}}</span>
   </div>
 
   <div class="shop-content">

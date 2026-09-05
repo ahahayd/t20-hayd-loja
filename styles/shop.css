@@ -69,24 +69,41 @@
 .wealth-total { font-size: 0.8em; opacity: 0.7; font-style: italic; }
 
 /* ── Barra de filtros ────────────────────────────────────── */
+/* Duas linhas EXPLÍCITAS (não dependem de flex-wrap para se agrupar
+   corretamente): a de cima com modo/busca/ordenação/contagem, a de baixo
+   (só aparece no modo ativo) com os toggles e o ajuste de preço. Depender
+   de wrap para isso quebrava o agrupamento de forma imprevisível em
+   janelas largas (ex.: 1920×1080), fazendo os checkboxes de "Somente
+   itens que posso comprar" / "Não exibir magias" quebrarem linha no meio
+   um do outro e o ajuste de preço "sobrar" solto. */
 .shop-filters {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 6px 10px;
   border-bottom: 1px solid rgba(128, 128, 128, 0.35);
   flex-shrink: 0;
+}
+.shop-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
+}
+.shop-filters-row-options {
+  padding-top: 6px;
+  border-top: 1px dashed rgba(128, 128, 128, 0.25);
 }
 .shop-filters .filter-group {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: nowrap;
 }
-.shop-filters label { font-size: 0.85em; }
+.shop-filters label { font-size: 0.85em; white-space: nowrap; }
 .shop-search-input { width: 180px; }
 .shop-sort { width: auto; }
-.filter-count { margin-left: auto; font-size: 0.85em; opacity: 0.75; }
+.filter-count { margin-left: auto; font-size: 0.85em; opacity: 0.75; white-space: nowrap; }
 
 .shop-mode-toggle { gap: 0; }
 .shop-mode-toggle .mode-btn {
@@ -103,15 +120,33 @@
   font-weight: bold;
 }
 
+.shop-affordable-toggle {
+  gap: 16px;
+  flex-wrap: wrap;
+}
 .shop-affordable-toggle .checkbox {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 0.85em;
+  white-space: nowrap;
+}
+.shop-affordable-toggle .checkbox input { flex: 0 0 auto; margin: 0; }
+
+/* Grupo de ajuste de preço (compra/venda): visual de "cartão" para não
+   ficar perdido solto na barra, sempre encostado à direita da linha. */
+.buy-percent-group,
+.sell-percent-group {
+  margin-left: auto;
+  flex-wrap: nowrap;
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid rgba(128, 128, 128, 0.18);
+  border-radius: 6px;
+  padding: 3px 10px;
 }
 .sell-percent-group input[type="range"] { width: 100px; }
 .sell-percent-group input[type="number"],
-.shop-sell-percent-input { width: 56px; }
+.shop-sell-percent-input { width: 56px; flex: 0 0 auto; }
 
 /* ── Conteúdo: filtros laterais + lista ──────────────────── */
 .shop-content {
