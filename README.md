@@ -1,5 +1,7 @@
 # T20 Hayd Loja
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
 Loja integrada para o sistema **Tormenta20** no FoundryVTT: um botão na ficha do personagem abre a vitrine com itens de compêndios, do mundo e individuais, com compra e venda descontando as moedas automaticamente.
 
 ## Requisitos
@@ -44,6 +46,42 @@ Em *Configurar → Configurações → T20 Hayd Loja → Configurar Fontes da Lo
 
 - Mensagens de compra no chat são opcionais e podem ser sussurradas apenas ao Mestre.
 - O campo de platina (TL) só aparece quando a regra de platina está habilitada no mundo.
+
+---
+
+## ❤️ Apoio e Comissões
+
+Este módulo é totalmente gratuito. Se você gosta de usá-lo e quiser apoiar seu desenvolvimento, qualquer contribuição é muito bem-vinda!
+
+### ☕ Ko-fi
+
+Você pode apoiar meu trabalho pelo Ko-fi:
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
+Ao apoiar pelo Ko-fi, você também pode deixar uma mensagem com um pedido ou sugestão de automação para Foundry VTT que gostaria de ver. Esses pedidos podem servir de inspiração para futuras funcionalidades, automações ou módulos.
+
+### 🇧🇷 Pix
+
+Se preferir, você também pode apoiar diretamente via Pix.
+
+**Chave Pix aleatória:**
+
+`a8baae96-f4d1-48a5-af25-45bf419fb0fb`
+
+<p align="center">
+  <img src="assets/qrcode.png" alt="QR Code Pix" width="220">
+</p>
+
+### 🛠️ Comissões para Foundry VTT
+
+Também aceito comissões para desenvolvimento no Foundry VTT, incluindo a implementação de **módulos completos de aventuras**, respeitando os direitos e licenças dos materiais utilizados, com cenas, atores, itens, diários, automações e outros conteúdos necessários para deixar a aventura pronta para uso no Foundry, além de módulos específicos para Tormenta20 e outros sistemas.
+
+Se tiver interesse em contratar uma comissão, você pode entrar em contato comigo pelo Discord `xddyahaha` para conversarmos sobre o projeto e seu escopo.
+
+<p align="center">
+  <sub>Todo apoio é opcional e ajuda a continuar desenvolvendo e mantendo meus módulos para Foundry VTT. ❤️</sub>
+</p>
 
 ## Aviso
 
