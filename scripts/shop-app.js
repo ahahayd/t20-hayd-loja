@@ -1338,7 +1338,7 @@ export class ShopApplication extends Application {
 
     if (existing && existing.system?.qtd !== undefined) {
       // Incrementa quantidade
-      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
     } else {
       // Cria novo item
       const itemData = sourceDoc.toObject();
@@ -1416,7 +1416,7 @@ export class ShopApplication extends Application {
     const existing = this.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === dedupeKey);
 
     if (existing && existing.system?.qtd !== undefined) {
-      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
     } else {
       const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
       if (created) {
@@ -1641,7 +1641,7 @@ export class ShopApplication extends Application {
     });
 
     if (existing && existing.system?.qtd !== undefined) {
-      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
     } else {
       const itemData = sourceDoc.toObject();
       itemData.system.qtd = qty;
@@ -1725,7 +1725,7 @@ export class ShopApplication extends Application {
     const existing = this.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === dedupeKey);
 
     if (existing && existing.system?.qtd !== undefined) {
-      await existing.update({ 'system.qtd': (existing.system.qtd || 1) + qty });
+      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
     } else {
       const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
       if (created) {
@@ -2519,7 +2519,7 @@ class CartApplication extends Application {
         itemData.system.qtd = item.qty;
         const existing = this.shopApp.actor.items.find(i => i.getFlag(MODULE_ID, 'spellDedupeKey') === item.spellDedupeKey);
         if (existing && existing.system?.qtd !== undefined) {
-          await existing.update({ 'system.qtd': (existing.system.qtd || 1) + item.qty });
+          await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + item.qty });
         } else {
           const [created] = await this.shopApp.actor.createEmbeddedDocuments('Item', [itemData]);
           if (created) {
@@ -2550,7 +2550,7 @@ class CartApplication extends Application {
       });
 
       if (existing && existing.system?.qtd !== undefined) {
-        await existing.update({ 'system.qtd': (existing.system.qtd || 1) + item.qty });
+        await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + item.qty });
       } else {
         const itemData = sourceDoc.toObject();
         itemData.system.qtd = item.qty;
