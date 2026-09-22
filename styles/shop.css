@@ -717,3 +717,8 @@
   line-height: 1;
   border-radius: 4px;
 }
+
+/* Chat: o número das moedas 1px maior. A sigla (TO/TP/TC) desconta o mesmo
+   1px proporcional para manter o tamanho de antes. */
+.chat-message .t20l-coin { font-size: calc(0.92em + 1px); }
+.chat-message .t20l-coin i { font-size: calc(0.72em - 0.72px); }
