@@ -80,7 +80,8 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
   flex-shrink: 0;
   flex-wrap: wrap;
 }
-.shop-wealth-bar .btn-open-cart { margin-left: auto; }
+.shop-wealth-bar .btn-open-upgrade { margin-left: auto; }
+.shop-wealth-bar .btn-open-upgrade + .btn-open-cart { margin-left: 0; }
 .shop-wealth-bar button {
   width: auto;
   flex: 0 0 auto;
@@ -456,6 +457,112 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
   font-size: 0.9em;
 }
 
+/* ── Itens Superiores e Encantados ─────────────────────── */
+.t20-loja-aprimorar .window-content { display: flex; flex-direction: column; }
+.apr-root { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
+.apr-root [hidden] { display: none !important; }
+.apr-abas { display: flex; gap: 6px; }
+.apr-abas button { flex: 1; }
+.apr-abas button.active { border-color: var(--loja-destaque, #960505); font-weight: bold; }
+.apr-lista { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
+.apr-item {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px; cursor: pointer;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+.apr-item:hover { background: rgba(128, 128, 128, 0.15); }
+.apr-item img { width: 28px; height: 28px; border: none; flex: 0 0 auto; }
+.apr-item-nome { flex: 1; }
+.apr-item-preco { font-size: 0.9em; opacity: 0.8; }
+.apr-badge, .apr-entrada-custo {
+  font-size: 0.8em; padding: 0 6px; border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.4); white-space: nowrap;
+}
+.apr-vazio, .apr-dica { font-size: 0.9em; opacity: 0.75; margin: 0; }
+.apr-cabecalho { display: flex; align-items: center; gap: 8px; }
+.apr-cabecalho .apr-voltar { flex: 0 0 auto; width: auto; }
+.apr-cabecalho img { width: 36px; height: 36px; border: none; }
+.apr-cabecalho-info { display: flex; flex-direction: column; }
+.apr-cabecalho-info small { opacity: 0.75; }
+.apr-existentes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.9em; }
+.apr-existentes p { flex-basis: 100%; margin: 0; }
+.apr-existentes input, .apr-rodape input[type="number"] { width: 60px; }
+.apr-filtros { display: flex; align-items: center; gap: 8px; }
+.apr-filtros .apr-busca { flex: 1; }
+.apr-filtros label { white-space: nowrap; font-size: 0.9em; }
+.apr-entradas { flex: 1; min-height: 120px; overflow-y: auto; }
+.apr-grupo-superior { --apr-cor: #9aa4b1; }
+.apr-grupo-material { --apr-cor: #c98a3a; }
+.apr-grupo-encanto  { --apr-cor: #8e6bd6; }
+.apr-abas-entradas {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; gap: 4px; padding-bottom: 6px;
+  background: var(--color-bg-option, rgba(20, 20, 24, 0.92));
+}
+.apr-aba {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--apr-cor) 45%, transparent);
+  border-bottom: 3px solid color-mix(in srgb, var(--apr-cor) 35%, transparent);
+  background: color-mix(in srgb, var(--apr-cor) 8%, transparent);
+  opacity: 0.75;
+}
+.apr-aba i { color: var(--apr-cor); }
+.apr-aba:hover { opacity: 1; }
+.apr-aba.active {
+  opacity: 1; font-weight: bold;
+  border-bottom-color: var(--apr-cor);
+  background: color-mix(in srgb, var(--apr-cor) 22%, transparent);
+}
+.apr-aba-cont {
+  font-weight: normal; font-size: 0.85em; color: var(--apr-cor);
+}
+.apr-aba-cont::before { content: '· '; opacity: 0.6; }
+.apr-grupo {
+  border-left: 4px solid var(--apr-cor);
+  border-radius: 3px;
+  padding: 2px 6px 4px;
+  background: color-mix(in srgb, var(--apr-cor) 6%, transparent);
+}
+.apr-separador {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0 2px; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6;
+}
+.apr-separador::before, .apr-separador::after {
+  content: ''; flex: 1; border-top: 1px solid color-mix(in srgb, var(--apr-cor) 50%, transparent);
+}
+.apr-grupo-dica { margin: 2px 0 4px; font-size: 0.8em; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.04em; }
+.apr-entrada:last-child { border-bottom: none; }
+.apr-entrada:has(input:checked) { background: color-mix(in srgb, var(--apr-cor) 16%, transparent); border-radius: 3px; }
+.apr-entrada input:checked + .apr-entrada-nome { color: var(--apr-cor); }
+.apr-grupo .apr-entrada-custo { border-color: color-mix(in srgb, var(--apr-cor) 60%, transparent); }
+.apr-entrada {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  column-gap: 6px; padding: 3px 4px; border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+.apr-entrada.possui { opacity: 0.5; }
+.apr-entrada-nome { font-weight: 600; }
+.apr-entrada-benef { grid-column: 2 / 4; font-size: 0.85em; opacity: 0.8; }
+.apr-custom { display: flex; gap: 6px; margin-bottom: 4px; }
+.apr-custom select { flex: 0 0 auto; width: auto; }
+.apr-custom input { flex: 1; }
+.apr-custom button, .apr-custom-add { flex: 0 0 auto; width: auto; }
+.apr-avisos { list-style: none; margin: 0; padding: 4px 8px; font-size: 0.85em; color: #c9772b; }
+.apr-rodape { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.apr-rodape-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.apr-rodape-linha label { display: flex; align-items: center; gap: 4px; }
+.apr-rodape input[name="nome"] { width: 360px; max-width: 100%; }
+.apr-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+.apr-preview div { display: flex; justify-content: space-between; gap: 8px; }
+.apr-alerta {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; margin-left: 3px; border-radius: 50%;
+  font-style: normal; font-weight: bold; font-size: 0.75em; line-height: 1;
+  background: #c9772b; color: #111; cursor: help; vertical-align: middle;
+}
+.apr-p-total-linha { font-size: 1.1em; }
+.apr-p-total.too-expensive { color: #e06c5a; }
+.tema-hayd .apr-item:hover { background: var(--loja-destaque-fundo); }
+.tema-hayd .apr-badge, .tema-hayd .apr-entrada-custo { border-color: var(--loja-borda); }
+
 /* ── Configurações (fontes da loja) ──────────────────────── */
 .t20-loja-settings-form .settings-section { margin-bottom: 10px; }
 .t20-loja-settings-form h3 {
@@ -694,6 +801,21 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 }
 .t20l-row > div { display: flex; flex-wrap: wrap; gap: 3px; align-items: baseline; }
 .t20l-nulo { opacity: 0.6; font-style: italic; }
+
+/* Lista de melhorias/encantos no cartão de Itens Superiores e Encantados */
+.t20l-aprim-titulo {
+  margin: 4px 0 2px; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.03em; opacity: 0.65;
+}
+.t20l-aprim { list-style: none; margin: 0 0 4px; padding: 0; }
+.t20l-aprim li {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  padding: 1px 0 1px 6px; border-left: 2px solid #9aa4b1;
+}
+.t20l-aprim li + li { margin-top: 2px; }
+.t20l-aprim li span { font-weight: 600; }
+.t20l-aprim li small { font-size: 0.75em; opacity: 0.7; white-space: nowrap; }
+.t20l-aprim li.t20l-aprim-material { border-left-color: #c98a3a; }
+.t20l-aprim li.t20l-aprim-encanto { border-left-color: #8e6bd6; }
 
 .t20l-saldo {
   display: flex;

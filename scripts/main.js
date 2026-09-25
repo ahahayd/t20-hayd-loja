@@ -127,17 +127,17 @@ Hooks.once('init', () => {
   // Troco realista: paga em espécie, sem normalizar a carteira
   game.settings.register(MODULE_ID, 'trocoRealista', {
     name: 'Troco realista (moedas em espécie)',
-    hint: 'O mercador passa a dar troco como na vida real: o personagem paga com as moedas que tem no bolso e recebe a diferença em cobre e prata — ou em ouro, nas compras mais caras. As moedas param de ser reorganizadas automaticamente a cada compra.',
+    hint: 'Paga com as moedas do bolso e recebe o troco em espécie, seguindo o limiar de ouro abaixo. As moedas deixam de ser reorganizadas a cada compra.',
     scope: 'world',
     config: true,
     type: Boolean,
-    default: false
+    default: true
   });
 
-  // Limiar (em TP) a partir do qual o troco vem em Tibares de Ouro
+  // Limiar (em TP) a partir do qual o ouro entra nos negócios
   game.settings.register(MODULE_ID, 'limiarTrocoTO', {
-    name: 'Troco realista: limiar para troco em TO',
-    hint: 'Compras a partir deste valor (em T$/TP) recebem o troco em Tibares de Ouro. Padrão: 1000.',
+    name: 'Troco realista: limiar para usar ouro',
+    hint: 'Negócios a partir deste valor (em TP) usam Tibares de Ouro. Abaixo dele, só prata e cobre, salvo falta de prata. Padrão: 1000.',
     scope: 'world',
     config: true,
     type: Number,
@@ -147,7 +147,7 @@ Hooks.once('init', () => {
   // Mensagens de compra/venda no chat
   game.settings.register(MODULE_ID, 'enableChatMessages', {
     name: 'Enviar mensagem no chat ao comprar/vender',
-    hint: 'Quando habilitado, envia mensagem no chat para compras e vendas.',
+    hint: 'Envia mensagem no chat para compras e vendas.',
     scope: 'world',
     config: true,
     type: Boolean,
@@ -157,7 +157,7 @@ Hooks.once('init', () => {
   // Mensagem apenas para o mestre (whisper)
   game.settings.register(MODULE_ID, 'whisperChatMessages', {
     name: 'Enviar mensagem no chat apenas para o mestre',
-    hint: 'Quando habilitado, envia as mensagens de compra/venda apenas como whisper para mestres.',
+    hint: 'Envia as mensagens de compra/venda apenas como whisper para mestres.',
     scope: 'world',
     config: true,
     type: Boolean,
@@ -166,7 +166,7 @@ Hooks.once('init', () => {
 
   game.settings.register(MODULE_ID, 'monitorPlayerMoneyChanges', {
     name: 'Monitorar mudanças de moedas feitas por jogadores',
-    hint: 'Quando habilitado, registra no chat mudanças manuais de moedas feitas por jogadores (mestres e macros não disparam).',
+    hint: 'Registra no chat mudanças manuais de moedas feitas por jogadores (mestres e macros não disparam).',
     scope: 'world',
     config: true,
     type: Boolean,
@@ -175,7 +175,7 @@ Hooks.once('init', () => {
 
   game.settings.register(MODULE_ID, 'monitorAllMoneyChanges', {
     name: 'Monitorar mudanças de moedas em todos os casos',
-    hint: 'Quando habilitado, registra no chat mudanças de moedas mesmo quando mestres ou macros alteram o dinheiro.',
+    hint: 'Registra no chat mudanças de moedas mesmo quando mestres ou macros alteram o dinheiro.',
     scope: 'world',
     config: true,
     type: Boolean,
@@ -197,7 +197,7 @@ Hooks.once('init', () => {
   // critério (system.dinheiro) do botão na ficha.
   game.keybindings.register(MODULE_ID, 'openShop', {
     name: 'Abrir Loja',
-    hint: 'Abre a loja para o token selecionado (ou para o personagem atribuído a você, se nenhum token estiver selecionado).',
+    hint: 'Abre a loja do token selecionado ou, sem seleção, do seu personagem.',
     editable: [{ key: 'KeyP' }],
     onDown: () => {
       const actor = actorParaAtalhoDaLoja();
@@ -268,6 +268,9 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
 
   // Só adiciona para atores com sistema de dinheiro (personagens jogáveis)
   if (!actor?.system?.dinheiro) return;
+
+  // Observadores/limitados não podem comprar pela ficha: só o dono (ou o GM) vê a loja
+  if (!actor.isOwner) return;
 
   const abrir = ev => {
     ev.preventDefault();

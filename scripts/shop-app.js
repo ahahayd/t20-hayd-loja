@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID, aplicarTemaLoja } from './main.js';
+import { AprimorarApplication } from './aprimorar-app.js';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -51,9 +52,6 @@ const CONSUMABLE_TYPES = ['ammo', 'scroll', 'alchemy', 'potion', 'material', 'fo
 const SPELL_SCHOOLS = ['abj', 'adv', 'con', 'enc', 'evo', 'ilu', 'nec', 'tra'];
 const SPELL_TYPE_CODES = ['arc', 'div', 'uni', 'eng', 'sim'];
 const SPELL_CIRCLES = [1, 2, 3, 4, 5];
-
-const UPGRADE_COSTS = [300, 3000, 9000, 18000];
-const ENCHANT_COSTS = [18000, 36000, 72000];
 
 /* Magias (item.type "magia" — "spell" é mantido por compatibilidade com
  * eventuais compêndios de outros sistemas/traduções). Pergaminhos e poções
@@ -314,7 +312,7 @@ function buildFilterTags(doc) {
   return Array.from(tags);
 }
 
-function getChatRecipients() {
+export function getChatRecipients() {
   if (!game.settings.get(MODULE_ID, 'whisperChatMessages')) return null;
   return game.users.filter(user => user.isGM).map(user => user.id);
 }
@@ -338,7 +336,7 @@ function calculateCartTotals(items, percent = 100) {
 /* ── Helpers de moeda ───────────────────────── */
 
 /** Converte (TO, TP, TC) → inteiro em cobre (base 1). */
-function toCobre(to = 0, tp = 0, tc = 0) {
+export function toCobre(to = 0, tp = 0, tc = 0) {
   return Math.round((to * 100) + (tp * 10) + tc);
 }
 
@@ -353,12 +351,14 @@ function fromCobre(cobre) {
 
 /* ── Troco realista ─────────────────────────────────────────────
    Com a opção "Troco realista" ligada, a loja deixa de normalizar a
-   carteira: o personagem paga com as moedas que tem (das menores para
-   as maiores) e recebe troco em espécie, conforme o porte da compra:
-     - compra pequena (< 10 TP): troco todo em cobre (TC);
-     - compra média: troco em prata e cobre (TP + TC);
-     - compra a partir do limiar do mestre (padrão 1000 TP): troco em
-       ouro (TO), com o resto em TP/TC.
+   carteira e segue a economia de Arton: o dia a dia é em prata.
+     - negócio abaixo do limiar do mestre (padrão 1000 TP): paga com
+       prata e cobre; ouro só entra se faltar prata. Troco em TP + TC;
+     - negócio a partir do limiar: paga com ouro primeiro, completando
+       com prata e cobre. Troco em TO + TP + TC.
+   O troco (e o que se recebe numa venda) sai sempre com o menor
+   número de moedas permitido. Os valores cobrados/recebidos são os
+   mesmos do modo clássico; só muda quais moedas trocam de mão.
    Desligada, vale o comportamento clássico (redistribuição ótima). */
 
 function trocoRealistaAtivo() {
@@ -375,14 +375,13 @@ function limiarTrocoTOCobre() {
 export function distribuirMoedasRealista(valorCobre, transacaoCobre) {
   if (valorCobre <= 0) return { to: 0, tp: 0, tc: 0 };
   if (transacaoCobre >= limiarTrocoTOCobre()) return fromCobre(valorCobre);
-  if (transacaoCobre < 10) return { to: 0, tp: 0, tc: valorCobre }; // compra abaixo de 1 TP: troco em cobre
   const tp = Math.floor(valorCobre / 10);
   return { to: 0, tp, tc: valorCobre - tp * 10 };
 }
 
 /**
- * Debita um custo da carteira. Retorna { to, tp, tc, troco } — `troco`
- * é null quando não houve (pagamento exato ou modo clássico).
+ * Debita um custo da carteira. Retorna { to, tp, tc, troco, pago } —
+ * `troco` é null quando não houve (pagamento exato ou modo clássico).
  * Pré-condição: o chamador já validou saldo suficiente.
  */
 export function debitarCarteira(wealth, costCopper) {
@@ -391,26 +390,32 @@ export function debitarCarteira(wealth, costCopper) {
     return { ...r, troco: null, pago: null };
   }
 
-  /* Pagamento com troco MÍNIMO: enumera as poucas combinações candidatas
-   * (piso/teto de cada moeda grande) e escolhe a de menor troco — no
-   * empate, a que gasta menos moedas grandes. Evita o caso "entrega 2 TP
-   * junto de 30 TO e recebe os mesmos 2 TP de volta". */
   const { to, tp, tc } = wealth;
+  const grande = costCopper >= limiarTrocoTOCobre();
+
+  /* Candidatos de ouro: abaixo do limiar, só o mínimo inevitável (o que a
+   * prata e o cobre não cobrem); a partir dele, piso/teto do custo em TO. */
+  const minimoTo = Math.min(to, Math.max(0, Math.ceil((costCopper - tp * 10 - tc) / 100)));
+  const candidatosTo = grande
+    ? new Set([minimoTo, Math.min(to, Math.floor(costCopper / 100)), Math.min(to, Math.ceil(costCopper / 100))])
+    : new Set([minimoTo]);
+
+  /* Entre os candidatos, o de menor troco. No empate: acima do limiar,
+   * o que usa mais ouro; abaixo, o que usa menos prata (mais cobre). */
   let melhor = null;
   const considerar = (usaTo, usaTp, usaTc, sobra) => {
     const trocoCobre = -sobra;
     if (melhor) {
       if (trocoCobre > melhor.trocoCobre) return;
-      if (trocoCobre === melhor.trocoCobre
-        && (usaTo > melhor.usaTo || (usaTo === melhor.usaTo && usaTp >= melhor.usaTp))) return;
+      if (trocoCobre === melhor.trocoCobre) {
+        if (grande ? usaTo < melhor.usaTo : usaTo > melhor.usaTo) return;
+        if (usaTo === melhor.usaTo && usaTp >= melhor.usaTp) return;
+      }
     }
     melhor = { usaTo, usaTp, usaTc, trocoCobre };
   };
 
-  for (const usaTo of new Set([
-    Math.min(to, Math.floor(costCopper / 100)),
-    Math.min(to, Math.ceil(costCopper / 100))
-  ])) {
+  for (const usaTo of candidatosTo) {
     const r1 = costCopper - usaTo * 100;
     if (r1 <= 0) { considerar(usaTo, 0, 0, r1); continue; }
     for (const usaTp of new Set([
@@ -424,7 +429,7 @@ export function debitarCarteira(wealth, costCopper) {
     }
   }
 
-  // Rede de segurança (não deve ocorrer com saldo suficiente): greedy antigo
+  // Rede de segurança (não deve ocorrer com saldo suficiente)
   if (!melhor) {
     let resto = costCopper;
     const usaTc = Math.min(tc, resto); resto -= usaTc;
@@ -446,7 +451,7 @@ export function debitarCarteira(wealth, costCopper) {
 }
 
 /** Linha "Pago" dos cards: as moedas entregues, como deltas negativos. */
-function linhaPagamento(pago) {
+export function linhaPagamento(pago) {
   if (!pago || (pago.to === 0 && pago.tp === 0 && pago.tc === 0)) return '';
   return linhaCartao('Pago', moedasChips({ to: -pago.to, tp: -pago.tp, tc: -pago.tc }, { delta: true }));
 }
@@ -510,7 +515,7 @@ export function linhaCartao(rotulo, valorHtml) {
 }
 
 /** Retorna texto legível para um preço em prata (TP). */
-function precoDisplay(silverPrice) {
+export function precoDisplay(silverPrice) {
   if (silverPrice === 0) return 'Grátis';
   // Formata para ter no máximo 1 casa decimal, se necessário.
   const formattedPrice = Number(silverPrice.toFixed(1));
@@ -961,7 +966,7 @@ export class ShopApplication extends Application {
         content: `
           <div class="t20-loja-spell-dialog">
             <p class="spell-dialog-hint">Magia de ${shopItem.spellCirculo}º círculo — custo base ${shopItem.spellCustoPM} PM.</p>
-            <p>Comprar como pergaminho (versão padrão) ou poção (permite escolher aprimoramentos)?</p>
+            <p>Pergaminho: versão padrão. Poção: permite escolher aprimoramentos.</p>
           </div>
         `,
         buttons: {
@@ -1332,6 +1337,7 @@ export class ShopApplication extends Application {
 
     // Verifica se o ator já possui o item (mesma origem)
     const existing = this.actor.items.find(i => {
+      if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
       const flag = i.getFlag(MODULE_ID, 'sourceUuid');
       return flag === uuid || i.name === sourceDoc.name;
     });
@@ -1636,6 +1642,7 @@ export class ShopApplication extends Application {
     if (!sourceDoc) return ui.notifications.error('Item não encontrado no compêndio.');
 
     const existing = this.actor.items.find(i => {
+      if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
       const flag = i.getFlag(MODULE_ID, 'sourceUuid');
       return flag === uuid || i.name === sourceDoc.name;
     });
@@ -1770,300 +1777,12 @@ export class ShopApplication extends Application {
     this.render();
   }
 
-  async _promptUpgrade() {
-    return new Promise(resolve => {
-      const fractions = [
-        { label: '1/2', value: 1 / 2 },
-        { label: '1/3', value: 1 / 3 },
-        { label: '1/4', value: 1 / 4 },
-        { label: '1/5', value: 1 / 5 },
-      ];
-      const defaultFraction = 1 / 3;
-      const formatCost = costCopper => {
-        if (costCopper <= 0) return 'Grátis';
-        if (costCopper < 10) return `${costCopper} TC`;
-        return precoDisplay(costCopper / 10);
-      };
-      const totalCost = (level, costs) => {
-        if (level <= 0) return 0;
-        return costs[level - 1] ?? 0;
-      };
-
-      const dialog = new Dialog({
-        title: 'Aprimoramentos e Encantos',
-        content: `
-          <div class="t20-loja-upgrade-dialog">
-            <div class="upgrade-row">
-              <label>Item (opcional)</label>
-              <input type="text" name="itemName" placeholder="Nome do item" />
-            </div>
-            <div class="upgrade-row">
-              <label>Melhorias atuais</label>
-              <input type="number" name="currentUpgrades" min="0" max="${UPGRADE_COSTS.length}" value="0" />
-              <label>Adicionar</label>
-              <input type="number" name="addUpgrades" min="0" max="${UPGRADE_COSTS.length}" value="0" />
-            </div>
-            <div class="upgrade-row">
-              <label>Encantos atuais</label>
-              <input type="number" name="currentEnchants" min="0" max="${ENCHANT_COSTS.length}" value="0" />
-              <label>Adicionar</label>
-              <input type="number" name="addEnchants" min="0" max="${ENCHANT_COSTS.length}" value="0" />
-            </div>
-            <div class="upgrade-row">
-              <label>Material especial (TP)</label>
-              <input type="number" name="extraCost" min="0" step="0.1" value="0" />
-            </div>
-            <div class="upgrade-row">
-              <label>Forma</label>
-              <select name="mode">
-                <option value="buy" selected>Comprar</option>
-                <option value="craft">Fabricar</option>
-              </select>
-            </div>
-            <div class="upgrade-mode upgrade-mode-buy">
-              <div class="upgrade-row">
-                <label>Valor</label>
-                <input type="range" class="upgrade-buy-range" min="1" max="200" step="1" value="100" />
-                <input type="number" class="upgrade-buy-input" min="1" max="200" step="1" value="100" />
-                <span>%</span>
-              </div>
-            </div>
-            <div class="upgrade-mode upgrade-mode-craft" style="display:none;">
-              <div class="upgrade-row">
-                <label>Fração do preço</label>
-                <select class="upgrade-craft-fraction">
-                  ${fractions
-                    .map(option => {
-                      const selected = option.value === defaultFraction ? 'selected' : '';
-                      return `<option value="${option.value}" ${selected}>${option.label}</option>`;
-                    })
-                    .join('')}
-                </select>
-              </div>
-              <div class="upgrade-row">
-                <label>Desconto matéria prima (TP)</label>
-                <input type="number" class="upgrade-craft-discount" min="0" step="0.1" value="0" />
-              </div>
-            </div>
-            <div class="upgrade-preview">
-              <div><strong>Custo base:</strong> <span class="upgrade-base-cost">${formatCost(0)}</span></div>
-              <div><strong>Total estimado:</strong> <span class="upgrade-total-cost">${formatCost(0)}</span></div>
-            </div>
-          </div>
-        `,
-        buttons: {
-          confirm: {
-            icon: '<i class="fas fa-arrow-up"></i>',
-            label: 'Aplicar',
-            callback: html => {
-              const itemName = (html.find('input[name="itemName"]').val() || '').trim();
-              const currentUpgrades = Number(html.find('input[name="currentUpgrades"]').val()) || 0;
-              const addUpgrades = Number(html.find('input[name="addUpgrades"]').val()) || 0;
-              const currentEnchants = Number(html.find('input[name="currentEnchants"]').val()) || 0;
-              const addEnchants = Number(html.find('input[name="addEnchants"]').val()) || 0;
-              const extraCost = Math.max(0, Number(html.find('input[name="extraCost"]').val()) || 0);
-              const mode = html.find('select[name="mode"]').val() || 'buy';
-              const buyPercent = Math.min(200, Math.max(1, Number(html.find('.upgrade-buy-input').val()) || 100));
-              const craftFraction = Number(html.find('.upgrade-craft-fraction').val()) || defaultFraction;
-              const craftDiscount = Math.max(0, Number(html.find('.upgrade-craft-discount').val()) || 0);
-              resolve({
-                itemName,
-                currentUpgrades,
-                addUpgrades,
-                currentEnchants,
-                addEnchants,
-                extraCost,
-                mode,
-                buyPercent,
-                craftFraction,
-                craftDiscount,
-              });
-            },
-          },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
-            label: 'Cancelar',
-            callback: () => resolve(null),
-          },
-        },
-        default: 'confirm',
-        close: () => resolve(null),
-        render: html => {
-          const currentUpgradesEl = html.find('input[name="currentUpgrades"]');
-          const addUpgradesEl = html.find('input[name="addUpgrades"]');
-          const currentEnchantsEl = html.find('input[name="currentEnchants"]');
-          const addEnchantsEl = html.find('input[name="addEnchants"]');
-          const extraCostEl = html.find('input[name="extraCost"]');
-          const modeEl = html.find('select[name="mode"]');
-          const buyRangeEl = html.find('.upgrade-buy-range');
-          const buyInputEl = html.find('.upgrade-buy-input');
-          const craftFractionEl = html.find('.upgrade-craft-fraction');
-          const craftDiscountEl = html.find('.upgrade-craft-discount');
-          const baseCostEl = html.find('.upgrade-base-cost');
-          const totalCostEl = html.find('.upgrade-total-cost');
-
-          const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
-          const updatePreview = () => {
-            const currentUpgrades = clamp(Number(currentUpgradesEl.val()) || 0, 0, UPGRADE_COSTS.length);
-            const currentEnchants = clamp(Number(currentEnchantsEl.val()) || 0, 0, ENCHANT_COSTS.length);
-            const addUpgrades = clamp(Number(addUpgradesEl.val()) || 0, 0, UPGRADE_COSTS.length - currentUpgrades);
-            const addEnchants = clamp(Number(addEnchantsEl.val()) || 0, 0, ENCHANT_COSTS.length - currentEnchants);
-            const extraCost = Math.max(0, Number(extraCostEl.val()) || 0);
-
-            currentUpgradesEl.val(currentUpgrades);
-            currentEnchantsEl.val(currentEnchants);
-            addUpgradesEl.val(addUpgrades);
-            addEnchantsEl.val(addEnchants);
-            extraCostEl.val(extraCost);
-
-            const targetUpgrades = currentUpgrades + addUpgrades;
-            const targetEnchants = currentEnchants + addEnchants;
-            const upgradesCost = totalCost(targetUpgrades, UPGRADE_COSTS) - totalCost(currentUpgrades, UPGRADE_COSTS);
-            const enchantsCost = totalCost(targetEnchants, ENCHANT_COSTS) - totalCost(currentEnchants, ENCHANT_COSTS);
-            const baseCostCopper = Math.max(0, Math.round((upgradesCost + enchantsCost + extraCost) * 10));
-
-            const mode = modeEl.val();
-            const buyPercent = clamp(Number(buyInputEl.val()) || 100, 1, 200);
-            const craftFraction = Number(craftFractionEl.val()) || defaultFraction;
-            const craftDiscount = Math.max(0, Number(craftDiscountEl.val()) || 0);
-
-            buyInputEl.val(buyPercent);
-            buyRangeEl.val(buyPercent);
-            craftDiscountEl.val(craftDiscount);
-
-            let totalCostCopper = baseCostCopper;
-            if (mode === 'buy') {
-              totalCostCopper = Math.round(baseCostCopper * (buyPercent / 100));
-            } else {
-              totalCostCopper = Math.max(0, Math.floor(baseCostCopper * craftFraction) - Math.round(craftDiscount * 10));
-            }
-
-            baseCostEl.text(formatCost(baseCostCopper));
-            totalCostEl.text(formatCost(totalCostCopper));
-          };
-
-          const toggleMode = () => {
-            const mode = modeEl.val();
-            html.find('.upgrade-mode-buy').toggle(mode === 'buy');
-            html.find('.upgrade-mode-craft').toggle(mode === 'craft');
-            updatePreview();
-          };
-
-          currentUpgradesEl.on('input', updatePreview);
-          addUpgradesEl.on('input', updatePreview);
-          currentEnchantsEl.on('input', updatePreview);
-          addEnchantsEl.on('input', updatePreview);
-          extraCostEl.on('input', updatePreview);
-          buyRangeEl.on('input', ev => {
-            buyInputEl.val(ev.currentTarget.value);
-            updatePreview();
-          });
-          buyInputEl.on('input', updatePreview);
-          craftFractionEl.on('change', updatePreview);
-          craftDiscountEl.on('input', updatePreview);
-          modeEl.on('change', toggleMode);
-
-          toggleMode();
-        },
-      });
-
-      dialog.render(true);
-    });
-  }
-
-  async _openUpgradeDialog() {
-    const data = await this._promptUpgrade();
-    if (!data) return;
-
-    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-    const currentUpgrades = clamp(data.currentUpgrades, 0, UPGRADE_COSTS.length);
-    const currentEnchants = clamp(data.currentEnchants, 0, ENCHANT_COSTS.length);
-    const addUpgrades = clamp(data.addUpgrades, 0, UPGRADE_COSTS.length - currentUpgrades);
-    const addEnchants = clamp(data.addEnchants, 0, ENCHANT_COSTS.length - currentEnchants);
-    const extraCost = Math.max(0, data.extraCost || 0);
-
-    if (addUpgrades + addEnchants === 0 && extraCost === 0) {
-      return ui.notifications.warn('Selecione pelo menos uma melhoria, encanto ou custo adicional.');
+  /** Itens Superiores e Encantados: janela própria (aprimorar-app.js). */
+  _openUpgradeDialog() {
+    if (!this._upgradeApp || !this._upgradeApp.rendered) {
+      this._upgradeApp = new AprimorarApplication(this);
     }
-
-    const totalCost = (level, costs) => {
-      if (level <= 0) return 0;
-      return costs[level - 1] ?? 0;
-    };
-
-    const targetUpgrades = currentUpgrades + addUpgrades;
-    const targetEnchants = currentEnchants + addEnchants;
-    const upgradesCost = totalCost(targetUpgrades, UPGRADE_COSTS) - totalCost(currentUpgrades, UPGRADE_COSTS);
-    const enchantsCost = totalCost(targetEnchants, ENCHANT_COSTS) - totalCost(currentEnchants, ENCHANT_COSTS);
-    const baseCostCopper = Math.max(0, Math.round((upgradesCost + enchantsCost + extraCost) * 10));
-
-    let totalCostCopper = baseCostCopper;
-    let buyPercent = 100;
-    let craftFraction = data.craftFraction ?? 1 / 3;
-    let craftDiscount = data.craftDiscount ?? 0;
-
-    if (data.mode === 'buy') {
-      buyPercent = clamp(data.buyPercent ?? 100, 1, 200);
-      totalCostCopper = Math.round(baseCostCopper * (buyPercent / 100));
-    } else {
-      craftFraction = data.craftFraction ?? 1 / 3;
-      craftDiscount = Math.max(0, data.craftDiscount ?? 0);
-      totalCostCopper = Math.max(0, Math.floor(baseCostCopper * craftFraction) - Math.round(craftDiscount * 10));
-    }
-
-    const wealth = this._wealthInfo();
-    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
-    if (totalCopper < totalCostCopper) {
-      return ui.notifications.warn('Moedas insuficientes para aplicar aprimoramentos.');
-    }
-
-    const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, totalCostCopper);
-
-    await this.actor.update({
-      'system.dinheiro.to': newTo,
-      'system.dinheiro.tp': newTp,
-      'system.dinheiro.tc': newTc,
-    }, { t20lojaInterno: true });
-
-    const formatCost = costCopper => {
-      if (costCopper <= 0) return 'Grátis';
-      if (costCopper < 10) return `${costCopper} TC`;
-      return precoDisplay(costCopper / 10);
-    };
-
-    const itemName = data.itemName || 'Item';
-    const messageContent = cartaoLoja({
-      icone: 'fa-wand-sparkles',
-      titulo: 'aplicou aprimoramentos',
-      ator: this.actor.name,
-      corpo: `
-        <div class="t20l-item">${itemName}</div>
-        ${linhaCartao('Melhorias', `<b>+${addUpgrades}</b> <small>(já tinha ${currentUpgrades})</small>`)}
-        ${linhaCartao('Encantos', `<b>+${addEnchants}</b> <small>(já tinha ${currentEnchants})</small>`)}
-        ${linhaCartao('Custo base', `<b>${formatCost(baseCostCopper)}</b>`)}
-        ${extraCost > 0 ? linhaCartao('Material especial', `<b>${formatCost(Math.round(extraCost * 10))}</b>`) : ''}
-        ${data.mode === 'buy'
-          ? linhaCartao('Compra', `<b>${buyPercent}%</b>`)
-          : linhaCartao('Fabricação', `<b>${Math.round((craftFraction) * 100)}%</b> · ${craftDiscount > 0
-              ? `desconto ${formatCost(Math.round(craftDiscount * 10))}`
-              : '<small class="t20l-nulo">sem desconto</small>'}`)}
-        ${linhaCartao('Total pago', `<b>${formatCost(totalCostCopper)}</b>`)}
-        ${linhaPagamento(pago)}
-        ${troco ? linhaCartao('Troco', moedasChips(troco)) : ''}`,
-      saldo: { tl: wealth.tl, to: newTo, tp: newTp, tc: newTc },
-      mostrarTl: atorUsaPlatina(this.actor)
-    });
-
-    if (game.settings.get(MODULE_ID, 'enableChatMessages')) {
-      await ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        content: messageContent,
-        whisper: getChatRecipients(),
-      });
-    }
-
-    this.render();
+    this._upgradeApp.render(true);
   }
 
   _openCart() {
@@ -2545,6 +2264,7 @@ class CartApplication extends Application {
       if (!sourceDoc) continue;
 
       const existing = this.shopApp.actor.items.find(i => {
+        if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
         const flag = i.getFlag(MODULE_ID, 'sourceUuid');
         return flag === item.uuid || i.name === sourceDoc.name;
       });

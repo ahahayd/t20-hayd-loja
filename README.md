@@ -30,9 +30,11 @@ Também é possível comprar magias, como pergaminho (versão padrão) ou poçã
 
 Na aba de venda, escolha itens do próprio inventário e o percentual do preço a receber. Itens de poder e habilidades não aparecem na lista — só o que faz sentido vender.
 
-### Troco realista (opcional)
+### Troco realista
 
-Com a opção ligada, o troco sai como um mercador de verdade daria: compras pequenas rendem troco em moedas menores e valores altos são consolidados em TO a partir de um limiar configurável. O pagamento usa o menor número possível de moedas e o chat mostra exatamente **como foi pago** e o troco recebido.
+Ligado por padrão. Segue a economia de Arton, em que o dia a dia é em prata: negócios abaixo do limiar do Mestre (padrão 1000 TP) são pagos com prata e cobre, e o ouro só entra se faltar prata. A partir do limiar, paga-se com ouro primeiro. O troco, e o que se recebe numa venda, sai com o menor número de moedas permitido para o porte do negócio. O valor cobrado é sempre o mesmo; só mudam as moedas que trocam de mão. O chat mostra **como foi pago** e o troco recebido.
+
+Desligado, a carteira é reorganizada a cada compra.
 
 ### Monitor de dinheiro (Mestre)
 
