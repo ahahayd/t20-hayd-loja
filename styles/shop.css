@@ -21,6 +21,42 @@
 .t20-loja-btn:hover { opacity: 0.8; }
 .t20-loja-btn i { font-size: 0.9em; }
 
+/* ── Atalho no fim da fileira de moedas ──────────────────── */
+/* Mesmo quadradinho do "Enviar dinheiro" do t20-hayd-gmtools, para as
+   ações da fileira de moedas terem um padrão só. !important pelo mesmo
+   motivo de lá: temas de ficha estilizam os itens da fileira com força. */
+ul.currency li.t20-loja-atalho {
+  flex: 0 0 auto !important;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+ul.currency li.t20-loja-atalho > a {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(128, 128, 128, 0.55) !important;
+  border-radius: 4px !important;
+  background: rgba(128, 128, 128, 0.15) !important;
+}
+ul.currency li.t20-loja-atalho > a:hover {
+  border-color: currentColor !important;
+  text-shadow: 0 0 6px currentColor;
+}
+ul.currency li.t20-loja-atalho > a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
 /* ── Janela da Loja — layout ─────────────────────────────── */
 .t20-loja-window .window-content {
   padding: 0;

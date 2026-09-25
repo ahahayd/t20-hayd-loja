@@ -269,9 +269,32 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
   // Só adiciona para atores com sistema de dinheiro (personagens jogáveis)
   if (!actor?.system?.dinheiro) return;
 
+  const abrir = ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    abrirLojaPara(actor);
+  };
+
+  // Atalho discreto no fim da fileira de moedas: é onde o jogador está
+  // olhando quando pensa em comprar. O corpo da ficha é recriado a cada
+  // render, então este entra sempre (o do cabeçalho, abaixo, sobrevive).
+  const moedas = html[0]?.querySelector?.('.inventory-currency ul.currency');
+  if (moedas && !moedas.querySelector('.t20-loja-atalho')) {
+    const li = document.createElement('li');
+    li.className = 't20-loja-atalho';
+    li.innerHTML = '<a role="button" tabindex="0" aria-label="Abrir Loja" data-tooltip="Abrir Loja">'
+      + '<i class="fas fa-store" inert></i></a>';
+    const link = li.firstElementChild;
+    link.addEventListener('click', abrir);
+    link.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') abrir(ev);
+    });
+    moedas.append(li);
+  }
+
   // Evita duplicar o botão em re-renders
-  const existingBtn = html.closest('.app').find('.t20-loja-btn');
-  if (existingBtn.length > 0) return;
+  const janela = html.closest('.app');
+  if (janela.find('.t20-loja-btn').length > 0) return;
 
   const btn = $(`
     <a class="t20-loja-btn header-button control" title="Abrir Loja">
@@ -279,15 +302,14 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
       <span>Loja</span>
     </a>
   `);
+  btn.on('click', abrir);
 
-  btn.on('click', ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    abrirLojaPara(actor);
-  });
-
-  // Insere antes do botão de fechar
-  html.closest('.app').find('.window-header .close').before(btn);
+  // Primeiro dos botões do cabeçalho, longe do fechar: um clique errado no
+  // "Loja" não pode fechar a ficha.
+  const header = janela.find('.window-header');
+  const primeiro = header.find('.header-button').first();
+  if (primeiro.length) primeiro.before(btn);
+  else header.find('.close').before(btn);
 });
 
 const moneySnapshots = new Map();
