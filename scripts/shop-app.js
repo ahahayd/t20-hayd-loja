@@ -150,6 +150,17 @@ function buildSpellConsumableData(sourceDoc, {
   const itemData = doc.toObject();
   delete itemData._id;
   delete itemData.stats;
+  // `toObject()` devolve os dados de ORIGEM: as rolagens voltariam sem os
+  // aprimoramentos (o dano original). O sistema resolve isso no "Fabricar
+  // Poção" copiando as rolagens já preparadas (`rolls.map(m => m.toObject(false))`);
+  // fazemos o mesmo, junto com os campos que os aprimoramentos alteram.
+  if (contentDoc) {
+    itemData.system.rolls = (contentDoc.system.rolls ?? []).map(r => (r.toObject ? r.toObject(false) : r));
+    for (const campo of ['area', 'alvo', 'alcance', 'duracao', 'criticoM', 'criticoX', 'resistencia']) {
+      const valor = contentDoc.system?.[campo];
+      if (valor !== undefined) itemData.system[campo] = foundry.utils.deepClone(valor);
+    }
+  }
   itemData.type = 'consumivel';
   itemData.name = `${subtipo} de ${sourceDoc.name}`;
   itemData.img = `systems/tormenta20/icons/itens/itens-magicos/${icon}.webp`;

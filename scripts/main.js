@@ -74,6 +74,67 @@ export function aplicarTemaLoja(app, ator = null) {
   el.classList.toggle('tema-hayd', tema);
   if (tema) el.style.setProperty('--loja-destaque', corDestaqueAtor(ator));
   else el.style.removeProperty('--loja-destaque');
+  requestAnimationFrame(() => ajustarContrasteLoja(el));
+  if (!el.dataset.contrasteObs) {
+    el.dataset.contrasteObs = '1';
+    // Mudanças de classe/estilo (ex.: botão ativo) sem re-render
+    let pendente = false;
+    new MutationObserver(() => {
+      if (pendente) return;
+      pendente = true;
+      requestAnimationFrame(() => { pendente = false; ajustarContrasteLoja(el); });
+    }).observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'disabled'] });
+  }
+}
+
+/* ── Contraste automático do texto ── */
+
+function _rgba(str) {
+  const m = str?.match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+  return { r, g, b, a };
+}
+
+function _luminancia({ r, g, b }) {
+  const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+function _contraste(l1, l2) {
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
+/** Cor de fundo efetiva: compõe as camadas semitransparentes até achar uma opaca. */
+function _fundoEfetivo(node) {
+  const camadas = [];
+  for (let n = node; n && n.nodeType === 1; n = n.parentElement) {
+    const c = _rgba(getComputedStyle(n).backgroundColor);
+    if (c && c.a > 0) { camadas.push(c); if (c.a >= 1) break; }
+  }
+  // Base: fundo escuro do tema/janela se nada for opaco
+  let cor = { r: 20, g: 18, b: 24 };
+  for (const c of camadas.reverse()) {
+    cor = { r: c.r * c.a + cor.r * (1 - c.a), g: c.g * c.a + cor.g * (1 - c.a), b: c.b * c.a + cor.b * (1 - c.a) };
+  }
+  return cor;
+}
+
+/**
+ * Garante leitura em botões, moedas e campos cujo fundo muda com a cor
+ * do jogador/tema: se o contraste da cor atual for baixo, troca para
+ * claro ou escuro (o que contrastar mais).
+ */
+export function ajustarContrasteLoja(el) {
+  const alvos = el.querySelectorAll('button, .wealth-coin, input[type="text"], input[type="number"], input[type="search"], select');
+  for (const alvo of alvos) {
+    alvo.style.removeProperty('color');
+    const fundo = _luminancia(_fundoEfetivo(alvo));
+    const texto = _rgba(getComputedStyle(alvo).color);
+    if (texto && _contraste(fundo, _luminancia(texto)) >= 4.5) continue;
+    const claro = _contraste(fundo, 1) >= _contraste(fundo, 0);
+    alvo.style.setProperty('color', claro ? '#ffffff' : '#111111', 'important');
+  }
 }
 
 /* ─────────────────────────────────────────────

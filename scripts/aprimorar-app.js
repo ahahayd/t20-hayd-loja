@@ -46,12 +46,38 @@ function precoEncantosLocal(n) {
   return n <= 0 ? 0 : 18000 * Math.pow(2, n - 1);
 }
 
+/**
+ * O t20-hayd-itens até a v1.2.0 não exporta as funções de variante de
+ * material; completa com equivalentes que leem `precos`/`beneficio`.
+ */
+const CATS_MATERIAL = ['arma', 'armaduraLeve', 'armaduraPesada', 'escudo', 'esoterico'];
+function comVariantes(mod) {
+  if (mod.materialServeNoItem) return mod;
+  const variantes = def => {
+    if (def?.variantes) return Object.keys(def.variantes).filter(v => CATS_MATERIAL.includes(v));
+    const comPreco = Object.keys(def?.precos ?? {}).filter(v => CATS_MATERIAL.includes(v));
+    return comPreco.length ? comPreco : CATS_MATERIAL;
+  };
+  const catDoItem = item => mod.categoriaMaterialDoItem?.(item);
+  return {
+    ...mod,
+    varianteInicial(def, item) {
+      const possiveis = variantes(def);
+      const cat = catDoItem(item);
+      return possiveis.includes(cat) ? cat : possiveis[0];
+    },
+    materialServeNoItem: (def, item) => variantes(def).includes(catDoItem(item)),
+    beneficioDaVariante: (def, v) => def?.variantes?.[v]?.beneficio ?? def?.beneficio ?? '',
+    precoDaVariante: (def, v) => Number(def?.precos?.[v]) || 0
+  };
+}
+
 /** Catálogo do t20-hayd-itens: importa os arquivos mesmo com o módulo inativo. */
 let _catalogo;
 async function carregarCatalogo() {
   if (_catalogo !== undefined) return _catalogo;
   try {
-    _catalogo = await import(`../../${ITENS_ID}/scripts/catalogo.mjs`);
+    _catalogo = comVariantes(await import(`../../${ITENS_ID}/scripts/catalogo.mjs`));
   } catch (err) {
     console.debug(`${MODULE_ID} | Catálogo do ${ITENS_ID} indisponível`, err);
     _catalogo = null;
