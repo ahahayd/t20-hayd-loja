@@ -13,3 +13,4 @@ AGENTS.md
 Thumbs.db
 *.log
 node_modules/
+.playwright-cli/
