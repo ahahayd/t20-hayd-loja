@@ -318,16 +318,6 @@ const onWorldItemChange = item => {
   if (!game.settings.get(MODULE_ID, 'includeWorldItems')) return;
   rebuildShopCache();
 };
-/* Os diálogos abertos pela Loja (quantidade, poção/pergaminho, fabricar)
-   herdam o tema dela. Sem isto, a janela de pergaminho abria um diálogo
-   cinza por cima — a mesma loja parecendo dois programas diferentes. */
-Hooks.on('renderDialog', (app, html) => {
-  const el = html?.[0] ?? html;
-  if (!(el instanceof HTMLElement)) return;
-  const janela = el.closest('.t20-loja-dialogo') ?? (el.classList.contains('t20-loja-dialogo') ? el : null);
-  if (janela) aplicarTemaLoja({ element: [janela] });
-});
-
 Hooks.on('createItem', onWorldItemChange);
 Hooks.on('updateItem', onWorldItemChange);
 Hooks.on('deleteItem', onWorldItemChange);

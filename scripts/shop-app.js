@@ -963,7 +963,7 @@ export class ShopApplication extends Application {
             preview.text(precoDisplay(unitPrice * clamped * percent));
           });
         },
-      }, { classes: ['t20-loja-window', 't20-loja-dialogo'] });
+      });
 
       dialog.render(true);
     });
@@ -994,7 +994,7 @@ export class ShopApplication extends Application {
         },
         default: 'pocao',
         close: () => resolve(null),
-      }, { classes: ['t20-loja-window', 't20-loja-dialogo'] }).render(true);
+      }).render(true);
     });
   }
 
@@ -1235,7 +1235,7 @@ export class ShopApplication extends Application {
           fractionInput.on('change', updatePreview);
           discountInput.on('input', updatePreview);
         },
-      }, { classes: ['t20-loja-window', 't20-loja-dialogo'] });
+      });
 
       dialog.render(true);
     });

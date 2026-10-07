@@ -23,7 +23,7 @@
  */
 
 const CLASSE = 'hayd-ui';
-const MARCADOR = '[class*="t20-loja-qty"], [class*="t20-loja-spell"], [class*="t20-loja-craft"], [class*="apr-"]';
+const MARCADOR = '[class*="t20-loja-qty"], [class*="t20-loja-spell"], [class*="t20-loja-craft"], [class*="t20-loja-tema"], [class*="apr-"]';
 /** Janelas próprias do módulo, pelo nome da classe da aplicação. */
 const JANELAS_PROPRIAS = new Set(['AprimorarApplication']);
 
@@ -48,6 +48,10 @@ function marcar(app, elemento) {
   if (!(raiz instanceof HTMLElement) || raiz.classList.contains(CLASSE)) return;
   if (!ehNossa(app, raiz)) return;
   raiz.classList.add(CLASSE);
+  // A vitrine da Loja tem tema próprio (e pode estar clara); estas janelas
+  // utilitárias seguem o padrão escuro da família, que é o que a pessoa já
+  // conhece das outras janelas dos módulos.
+  raiz.classList.add('hayd-ui-escuro');
 }
 
 Hooks.on('renderApplicationV2', marcar);

@@ -19,7 +19,7 @@
  * arquivos (se instalados) e as entradas vão para a descrição do item.
  */
 
-import { MODULE_ID, aplicarTemaLoja } from './main.js';
+import { MODULE_ID } from './main.js';
 import {
   getShopItems, debitarCarteira, cartaoLoja, linhaCartao, moedasChips, atorUsaPlatina,
   precoDisplay, linhaPagamento, getChatRecipients, toCobre,
@@ -541,7 +541,10 @@ export class AprimorarApplication extends Application {
 
   activateListeners(html) {
     super.activateListeners(html);
-    aplicarTemaLoja(this, this.actor);
+    // Esta janela NÃO usa o tema da Loja: é um formulário de trabalho e
+    // segue o padrão das janelas do GMTools (ver styles/hayd-ui-base.css),
+    // que é o que o Mestre já conhece do painel de engenhocas. O tema da
+    // Loja continua valendo para a vitrine e o carrinho.
 
     // Busca: só esconde linhas, sem re-render (preserva foco e scroll)
     html.find('.apr-busca').on('input', ev => {

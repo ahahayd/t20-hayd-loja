@@ -1001,3 +1001,42 @@
 :is(.hayd-ui, .t20g-ui) .window-content tbody tr:is(.ativa, .atual) td:first-child {
   box-shadow: inset 2px 0 0 var(--t20g-accent);
 }
+
+/* ══ Forçar a rampa escura ════════════════════════════════════════════════
+   `.hayd-ui-escuro` trava a janela na rampa escura, mesmo num mundo (ou
+   numa janela) em tema claro.
+
+   Existe para um caso específico: a janela utilitária de um módulo cuja
+   JANELA PRINCIPAL tem tema próprio e claro. O formulário de trabalho
+   acompanha o padrão da família — que é o que a pessoa já conhece das
+   outras janelas dos módulos — em vez de mudar de cara conforme o tema da
+   janela que o abriu.
+
+   Precisa dos dois seletores juntos para empatar com o bloco de tema claro
+   e vencer por vir depois. */
+:is(.hayd-ui, .t20g-ui).hayd-ui-escuro {
+  --t20g-s0: #15131b;
+  --t20g-s1: #1c1a24;
+  --t20g-s2: #24212d;
+  --t20g-s3: #2e2a38;
+  --t20g-s4: #3a3545;
+  --t20g-line: color-mix(in oklab, #fff 9%, transparent);
+  --t20g-line-forte: color-mix(in oklab, #fff 16%, transparent);
+  --t20g-ink: #ece9f2;
+  --t20g-ink-2: #b3adc0;
+  --t20g-ink-3: #847e92;
+  --t20g-accent: #e2a44c;
+  --t20g-accent-forte: #f0b75f;
+  --t20g-accent-fundo: color-mix(in oklab, var(--t20g-accent) 14%, transparent);
+  --t20g-accent-linha: color-mix(in oklab, var(--t20g-accent) 42%, transparent);
+  --t20g-ink-sobre-accent: #1a1208;
+  --t20g-perigo: #e05a4d;
+  --t20g-sucesso: #4fae72;
+  --t20g-aviso: #d8a033;
+  --t20g-info: #5b9bd8;
+  --t20g-pv: #c2443c;
+  --t20g-pm: #3f7fc4;
+  --t20g-carga: #9a8544;
+  --t20g-sombra1: 0 1px 2px rgb(10 7 16 / 45%);
+  --t20g-sombra2: 0 6px 16px -8px rgb(10 7 16 / 75%);
+}
