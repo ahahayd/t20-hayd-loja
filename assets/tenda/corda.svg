@@ -1,0 +1,20 @@
+<!-- Corda trançada: ladrilho horizontal de 18x10, usado como divisória. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="10" viewBox="0 0 18 10">
+  <defs>
+    <linearGradient id="fio" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#9c7639"/>
+      <stop offset=".35" stop-color="#d8b579"/>
+      <stop offset=".70" stop-color="#9a7336"/>
+      <stop offset="1"   stop-color="#6d4c20"/>
+    </linearGradient>
+  </defs>
+  <rect width="18" height="10" fill="#4a3014"/>
+  <g fill="url(#fio)">
+    <path d="M-2 10 Q 2 0 7 0 L 11 0 Q 6 0 2 10 Z"/>
+    <path d="M7 10 Q 11 0 16 0 L 20 0 Q 15 0 11 10 Z"/>
+  </g>
+  <g stroke="#000" stroke-opacity=".3" stroke-width=".8" fill="none">
+    <path d="M-2 10 Q 2 0 7 0"/>
+    <path d="M7 10 Q 11 0 16 0"/>
+  </g>
+</svg>

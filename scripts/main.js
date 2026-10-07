@@ -18,6 +18,68 @@ export function temaHayd() {
   return game.modules?.get('t20-hayd-ui')?.active === true;
 }
 
+/** Temas oferecidos, na ordem em que aparecem para o usuário. */
+export const TEMAS = {
+  desativado: { rotulo: 'Desativado (visual padrão do Foundry)' },
+  tenda     : { rotulo: 'Tenda medieval', classe: 'tema-tenda' },
+  hayd      : { rotulo: 'T20 Hayd UI', classe: 'tema-hayd', exige: 't20-hayd-ui' },
+};
+
+/**
+ * Tema padrão: Tenda medieval, sempre.
+ *
+ * Antes dependia do t20-hayd-ui: com ele ativo o padrão era 'hayd', sem
+ * ele era 'desativado' — ou seja, quem instalasse só a loja caía no
+ * visual cru do Foundry e nunca descobria que havia tema. A Tenda não
+ * exige módulo nenhum (as texturas são SVG gerado aqui dentro), então
+ * serve de padrão em qualquer mundo.
+ *
+ * Isto só vale para mundos que NUNCA gravaram a configuração: o Foundry
+ * usa o default apenas na ausência de valor. Quem já abriu a loja antes
+ * continua no tema que estava, e troca pelo botão "Alterar tema".
+ */
+export function temaPadrao() {
+  return 'tenda';
+}
+
+/**
+ * Tema visual escolhido nas configurações do módulo, já resolvido:
+ * uma das chaves de TEMAS. Um tema cujo módulo exigido não está ativo
+ * cai para 'desativado'. 'padrao' é o nome antigo de 'desativado' e
+ * continua sendo aceito em mundos salvos antes da renomeação.
+ */
+export function temaLoja() {
+  let escolha = null;
+  try { escolha = game.settings.get(MODULE_ID, 'temaVisual'); }
+  catch (_e) { /* chamado antes do registro da configuração */ }
+  if (escolha === 'padrao') return 'desativado';
+  const tema = TEMAS[escolha];
+  if (!tema) return 'desativado';
+  if (tema.exige && !game.modules?.get(tema.exige)?.active) return 'desativado';
+  return escolha;
+}
+
+/**
+ * O lampião está ligado? O try existe pelo mesmo motivo do temaLoja():
+ * isto é consultado em render, e um render pode acontecer antes de o
+ * registro das configurações ter rodado. Na dúvida, ligado.
+ */
+export function lampiaoLigado() {
+  try { return game.settings.get(MODULE_ID, 'lampiao') !== false; }
+  catch (_e) { return true; }
+}
+
+/** Re-renderiza as janelas da loja abertas, para um ajuste de aparência
+ *  aparecer sem o mestre ter de fechar e abrir tudo. */
+export function rerenderJanelasLoja() {
+  for (const app of Object.values(ui.windows)) {
+    const el = app.element?.[0];
+    if (el?.classList.contains('t20-loja-window') || el?.classList.contains('t20-loja-settings')) {
+      app.render(false);
+    }
+  }
+}
+
 /** Cor padrão do t20-hayd-ui (alterável nas configurações do mundo). */
 function corPadraoTema() {
   try {
@@ -63,19 +125,30 @@ export function corDestaqueAtor(ator) {
 }
 
 /**
- * Aplica (ou remove) o tema Hayd na janela de uma Application V1.
- * A cor de destaque segue o ator que está usando a loja (cor do jogador
- * dono, como no t20-hayd-ui). Sem o t20-hayd-ui, o visual fica o padrão
- * neutro do Foundry.
+ * Aplica (ou remove) o tema escolhido na janela de uma Application V1.
+ * No tema Hayd a cor de destaque segue o ator que está usando a loja
+ * (cor do jogador dono, como no t20-hayd-ui). Sem o t20-hayd-ui, o
+ * visual fica o padrão neutro do Foundry.
  */
 export function aplicarTemaLoja(app, ator = null) {
   const el = app.element?.[0];
   if (!el) return;
-  const tema = temaHayd();
-  el.classList.toggle('tema-hayd', tema);
-  if (tema) el.style.setProperty('--loja-destaque', corDestaqueAtor(ator));
+  const tema = temaLoja();
+  for (const [chave, def] of Object.entries(TEMAS)) {
+    if (def.classe) el.classList.toggle(def.classe, tema === chave);
+  }
+  el.classList.toggle('loja-sem-lampiao', !lampiaoLigado());
+  if (tema === 'hayd') el.style.setProperty('--loja-destaque', corDestaqueAtor(ator));
   else el.style.removeProperty('--loja-destaque');
-  requestAnimationFrame(() => ajustarContrasteLoja(el));
+  // O ajuste automático de contraste existe por causa da cor de destaque
+  // variável do tema Hayd. Os outros temas têm paleta fixa e já conferida,
+  // então ficam de fora (nos gradientes do tema Tenda o cálculo de fundo
+  // efetivo erraria e inverteria o texto dos botões).
+  const corrigirContraste = () => {
+    if (temaLoja() === 'hayd') ajustarContrasteLoja(el);
+    else limparContrasteLoja(el);
+  };
+  requestAnimationFrame(corrigirContraste);
   if (!el.dataset.contrasteObs) {
     el.dataset.contrasteObs = '1';
     // Mudanças de classe/estilo (ex.: botão ativo) sem re-render
@@ -83,9 +156,109 @@ export function aplicarTemaLoja(app, ator = null) {
     new MutationObserver(() => {
       if (pendente) return;
       pendente = true;
-      requestAnimationFrame(() => { pendente = false; ajustarContrasteLoja(el); });
+      requestAnimationFrame(() => { pendente = false; corrigirContraste(); });
     }).observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'disabled'] });
   }
+}
+
+/* ─────────────────────────────────────────────
+   Seletor rápido de tema (botão no cabeçalho da loja)
+───────────────────────────────────────────── */
+
+/**
+ * Diálogo de troca de tema. A configuração é de mundo, então quem não
+ * é mestre só recebe o aviso — o botão também não é oferecido a ele.
+ * Um tema cujo módulo exigido não está ativo aparece desabilitado, com
+ * o motivo escrito, em vez de sumir: assim quem procura entende por quê.
+ */
+export function escolherTemaLoja() {
+  if (!game.user?.isGM) {
+    ui.notifications.warn('Só o mestre pode alterar o tema da loja.');
+    return;
+  }
+  const atual = temaLoja();
+  // O valor gravado pode diferir do resolvido (ex.: 'hayd' gravado com o
+  // t20-hayd-ui desativado). É ele que o Cancelar restaura.
+  const salvo = game.settings.get(MODULE_ID, 'temaVisual');
+  const lampiaoSalvo = lampiaoLigado();
+  // O lampião só existe no tema Tenda, então mora na linha dele, e não
+  // numa seção própria: assim o escopo da opção se lê sozinho.
+  //
+  // Os dois controles são IRMÃOS dentro da linha, nunca um <label>
+  // dentro do outro: label aninhada é inválida, e o clique no checkbox
+  // marcaria o radio do tema junto.
+  const linhas = Object.entries(TEMAS).map(([chave, def]) => {
+    const faltando = def.exige && !game.modules?.get(def.exige)?.active;
+    const lampiao = chave !== 'tenda' ? '' : `
+        <label class="tema-sub" title="Esconde o lampião pendurado no canto da janela da loja.">
+          <input type="checkbox" name="semLampiao" ${lampiaoSalvo ? '' : 'checked'}>
+          <span>Desativar lampião</span>
+        </label>`;
+    return `
+      <div class="tema-linha">
+        <label class="tema-opcao${faltando ? ' tema-indisponivel' : ''}">
+          <input type="radio" name="tema" value="${chave}"
+                 ${chave === atual ? 'checked' : ''} ${faltando ? 'disabled' : ''}>
+          <span>${def.rotulo}</span>
+          ${faltando ? `<small>precisa do módulo ${def.exige} ativo</small>` : ''}
+        </label>${lampiao}
+      </div>`;
+  }).join('');
+
+  new Dialog({
+    title: 'Tema da loja',
+    content: `<div class="t20-loja-tema-dialog">${linhas}</div>`,
+    buttons: {
+      aplicar: {
+        icon: '<i class="fas fa-check"></i>',
+        label: 'Aplicar',
+        callback: html => {
+          const escolha = html.find('input[name="tema"]:checked').val();
+          if (escolha) game.settings.set(MODULE_ID, 'temaVisual', escolha);
+          const sem = html.find('input[name="semLampiao"]').prop('checked');
+          game.settings.set(MODULE_ID, 'lampiao', !sem);
+        },
+      },
+      cancelar: {
+        icon: '<i class="fas fa-times"></i>',
+        label: 'Cancelar',
+        // A prévia já gravou a escolha; cancelar precisa devolver o valor
+        // anterior, senão o botão não cancela nada.
+        callback: () => {
+          game.settings.set(MODULE_ID, 'temaVisual', salvo);
+          game.settings.set(MODULE_ID, 'lampiao', lampiaoSalvo);
+        },
+      },
+    },
+    default: 'aplicar',
+    render: html => {
+      // Marcar uma opção já aplica: dá para ver o tema atrás do diálogo
+      // antes de confirmar.
+      html.find('input[name="semLampiao"]').on('change', ev => {
+        game.settings.set(MODULE_ID, 'lampiao', !ev.currentTarget.checked);
+      });
+      html.find('input[name="tema"]').on('change', ev => {
+        game.settings.set(MODULE_ID, 'temaVisual', ev.currentTarget.value);
+      });
+    },
+  }).render(true);
+}
+
+/**
+ * Botão "Alterar tema" ao lado do fechar, na vitrine da loja.
+ * Devolve a lista de botões do cabeçalho já com ele na frente.
+ * Usado pelo _getHeaderButtons de ShopApplication. O carrinho não
+ * recebe o botão: ele herda o tema da vitrine que o abriu.
+ */
+export function botoesCabecalhoComTema(botoes) {
+  if (!game.user?.isGM) return botoes;
+  botoes.unshift({
+    label: 'Alterar tema',
+    class: 't20-loja-tema',
+    icon: 'fas fa-palette',
+    onclick: () => escolherTemaLoja(),
+  });
+  return botoes;
 }
 
 /* ── Contraste automático do texto ── */
@@ -121,14 +294,22 @@ function _fundoEfetivo(node) {
   return cor;
 }
 
+/** Seletores cujo texto o ajuste de contraste pode sobrescrever. */
+const ALVOS_CONTRASTE =
+  'button, .wealth-coin, input[type="text"], input[type="number"], input[type="search"], select';
+
+/** Remove as cores forçadas por ajustarContrasteLoja (ao trocar de tema). */
+export function limparContrasteLoja(el) {
+  for (const alvo of el.querySelectorAll(ALVOS_CONTRASTE)) alvo.style.removeProperty('color');
+}
+
 /**
  * Garante leitura em botões, moedas e campos cujo fundo muda com a cor
  * do jogador/tema: se o contraste da cor atual for baixo, troca para
  * claro ou escuro (o que contrastar mais).
  */
 export function ajustarContrasteLoja(el) {
-  const alvos = el.querySelectorAll('button, .wealth-coin, input[type="text"], input[type="number"], input[type="search"], select');
-  for (const alvo of alvos) {
+  for (const alvo of el.querySelectorAll(ALVOS_CONTRASTE)) {
     alvo.style.removeProperty('color');
     const fundo = _luminancia(_fundoEfetivo(alvo));
     const texto = _rgba(getComputedStyle(alvo).color);
@@ -143,6 +324,11 @@ export function ajustarContrasteLoja(el) {
 ───────────────────────────────────────────── */
 Hooks.once('init', () => {
   console.log(`${MODULE_ID} | Inicializando módulo Tormenta20 Loja`);
+
+  /* Linhas da tabela da loja: partial usado tanto no render completo quanto
+   * na paginação por scroll (que injeta só as linhas novas no tbody). */
+  const carregarTemplates = foundry.applications?.handlebars?.loadTemplates ?? loadTemplates;
+  carregarTemplates([`modules/${MODULE_ID}/templates/shop-rows.hbs`]);
 
   // Lista de IDs de compêndios extras (ex: "world.meu-compendio")
   game.settings.register(MODULE_ID, 'extraCompendiums', {
@@ -162,6 +348,33 @@ Hooks.once('init', () => {
     config: false,
     type: Array,
     default: []
+  });
+
+  // Tema visual das janelas da loja. O padrão é o T20 Hayd UI quando
+  // esse módulo existe no mundo; sem ele, nenhum tema.
+  game.settings.register(MODULE_ID, 'temaVisual', {
+    name: 'Tema visual da loja',
+    hint: 'Aparência das janelas da loja. O botão "Alterar tema" no cabeçalho da loja muda isto sem passar por aqui. "T20 Hayd UI" exige o módulo t20-hayd-ui ativo no mundo.',
+    scope: 'world',
+    config: true,
+    type: String,
+    choices: Object.fromEntries(Object.entries(TEMAS).map(([k, t]) => [k, t.rotulo])),
+    default: temaPadrao(),
+    onChange: () => rerenderJanelasLoja(),
+  });
+
+  // Lampião decorativo do tema Tenda Medieval. É de mundo, como o tema:
+  // a loja é a mesma para todos, e um jogador vendo a lamparina e outro
+  // não seria mais confuso que útil. Quem simplesmente não quer
+  // movimento na tela já é atendido pelo prefers-reduced-motion.
+  game.settings.register(MODULE_ID, 'lampiao', {
+    name: 'Lampião da loja',
+    hint: 'O lampião pendurado no canto da janela, no tema Tenda Medieval. O botão "Alterar tema" no cabeçalho da loja também liga e desliga isto.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => rerenderJanelasLoja(),
   });
 
   // Se deve incluir compêndios do sistema automaticamente
@@ -334,9 +547,17 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
   // Observadores/limitados não podem comprar pela ficha: só o dono (ou o GM) vê a loja
   if (!actor.isOwner) return;
 
+  // stopImmediatePropagation (e não só stopPropagation): o botão do
+  // cabeçalho usa a classe .header-button para herdar o estilo do Foundry,
+  // e o Foundry liga o handler dele em todos os .header-button 500 ms
+  // depois do render — se a injeção cair dentro dessa janela, ele também
+  // escuta o nosso botão, não o encontra em headerButtons e estoura
+  // ("Cannot read properties of undefined (reading 'onclick')"). Como o
+  // nosso handler é ligado antes, basta impedir os seguintes do elemento.
   const abrir = ev => {
     ev.preventDefault();
     ev.stopPropagation();
+    ev.stopImmediatePropagation?.();
     abrirLojaPara(actor);
   };
 
@@ -459,3 +680,60 @@ Hooks.on('updateActor', (actor, data, options, userId) => {
     });
   }, JANELA_AGRUPAMENTO_MS);
 });
+
+/* ── Piso mínimo das janelas (responsividade básica) ──────────
+   Solução temporária: em vez de uma responsividade real, as janelas
+   redimensionáveis da loja apenas param de encolher num tamanho em que
+   o layout ainda se lê. O CSS cuida da parte visual (container queries
+   em shop.css); aqui garantimos que o arrasto da alça de resize não
+   leve a janela abaixo do piso.
+
+   Precisa ser no setPosition porque a alça de resize do Foundry chama
+   setPosition direto com a largura/altura do ponteiro: um min-width no
+   CSS corrigiria o visual, mas a posição guardada continuaria menor e
+   voltaria errada no próximo render. */
+export function pisoDaJanela(app, superSetPosition, posicao = {}, piso = {}) {
+  const pos = { ...posicao };
+  if (Number.isFinite(pos.width) && Number.isFinite(piso.width)) {
+    pos.width = Math.max(pos.width, piso.width);
+  }
+  if (Number.isFinite(pos.height) && Number.isFinite(piso.height)) {
+    pos.height = Math.max(pos.height, piso.height);
+  }
+  return superSetPosition.call(app, pos);
+}
+
+/* ── Classes de largura (responsividade básica) ───────────────
+   Media queries olham a viewport, não a janela do app, então não
+   servem aqui: duas lojas abertas lado a lado têm larguras
+   diferentes na mesma tela. Em vez de container queries (que exigem
+   containment no elemento e brigariam com as decorações que vazam da
+   janela no tema tenda), um ResizeObserver marca o app com classes de
+   faixa e o CSS reage a elas.
+
+   .t20l-estreito        → abaixo de 760px
+   .t20l-muito-estreito  → abaixo de 560px */
+const FAIXAS_LARGURA = [
+  { classe: 't20l-estreito', max: 760 },
+  { classe: 't20l-muito-estreito', max: 560 },
+];
+
+export function observarLargura(app) {
+  // A janela inteira (.app), não o html do template: as classes de faixa são
+  // lidas pelo CSS a partir de .t20-loja-window.
+  const el = app.element?.[0] ?? app.element;
+  if (!el) return;
+
+  const marcar = (largura) => {
+    for (const { classe, max } of FAIXAS_LARGURA) el.classList.toggle(classe, largura < max);
+  };
+  marcar(el.getBoundingClientRect().width);
+
+  // Um observer por janela; o anterior morre junto com o elemento antigo
+  // a cada re-render, mas desconectamos à mão para não acumular.
+  app._observadorLargura?.disconnect();
+  app._observadorLargura = new ResizeObserver((entradas) => {
+    marcar(entradas[0].contentRect.width);
+  });
+  app._observadorLargura.observe(el);
+}

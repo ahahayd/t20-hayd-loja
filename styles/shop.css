@@ -451,6 +451,50 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 .t20-loja-craft-dialog select,
 .t20-loja-upgrade-dialog select { width: auto; flex: 0 0 auto; }
 .t20-loja-spell-dialog .spell-dialog-hint { margin: 0 0 8px; font-size: 0.9em; opacity: 0.8; }
+
+/* Seletor de tema (botão "Alterar tema" no cabeçalho da loja). Fica no
+   CSS base porque o diálogo abre em qualquer tema, inclusive no
+   desativado. */
+.t20-loja-tema-dialog { display: flex; flex-direction: column; gap: 6px; }
+.t20-loja-tema-dialog .tema-opcao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.t20-loja-tema-dialog .tema-opcao:hover { background: rgba(128, 128, 128, 0.12); }
+.t20-loja-tema-dialog .tema-opcao input { flex: 0 0 auto; margin: 0; }
+.t20-loja-tema-dialog .tema-opcao > span { flex: 1; }
+.t20-loja-tema-dialog .tema-opcao small { font-size: 0.8em; opacity: 0.7; font-style: italic; }
+/* Uma linha = o tema, mais os ajustes que só valem para ele. Hoje só a
+   Tenda tem um (o lampião); as outras linhas são só o rótulo, e o
+   .tema-opcao com flex:1 faz elas continuarem ocupando a largura toda
+   sem precisar de regra própria. */
+.t20-loja-tema-dialog .tema-linha { display: flex; align-items: stretch; gap: 6px; }
+.t20-loja-tema-dialog .tema-linha > .tema-opcao { flex: 1; min-width: 0; }
+
+/* O ajuste do tema: mesma moldura da opção, mas discreto, para não
+   competir com a escolha do tema em si. */
+.t20-loja-tema-dialog .tema-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  font-size: 0.85em;
+  opacity: 0.85;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t20-loja-tema-dialog .tema-sub:hover { background: rgba(128, 128, 128, 0.12); opacity: 1; }
+.t20-loja-tema-dialog .tema-sub input { flex: 0 0 auto; margin: 0; }
+.t20-loja-tema-dialog .tema-indisponivel { opacity: 0.55; cursor: not-allowed; }
+.t20-loja-tema-dialog .tema-indisponivel:hover { background: none; }
 .craft-preview,
 .upgrade-preview,
 .qty-preview {
@@ -907,10 +951,7 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 .hayd-ui .apr-confirmar > i { color: inherit; opacity: 1; }
 .hayd-ui .apr-confirmar:disabled { opacity: 0.45; }
 
-/* Janela estreita: pagamento e conta deixam de dividir a linha. */
-@media (max-width: 640px) {
-  .apr-rodape-colunas { grid-template-columns: minmax(0, 1fr); }
-}
+/* Janela estreita: ver o bloco de responsividade no fim do arquivo. */
 
 /* ── Configurações (fontes da loja) ──────────────────────── */
 .t20-loja-settings-form .settings-section { margin-bottom: 10px; }
@@ -1229,3 +1270,70 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
    1px proporcional para manter o tamanho de antes. */
 .chat-message .t20l-coin { font-size: calc(0.92em + 1px); }
 .chat-message .t20l-coin i { font-size: calc(0.72em - 0.72px); }
+
+/* Aviso de rolagem infinita no fim da lista de itens */
+.shop-more-indicator {
+  padding: 8px 0 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  opacity: 0.6;
+}
+
+.shop-more-indicator[hidden] {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVIDADE BÁSICA (temporária)
+
+   As classes .t20l-estreito / .t20l-muito-estreito são postas na janela
+   pelo ResizeObserver de observarLargura() (scripts/main.js), porque
+   @media mede a viewport e não a janela do app. O encolhimento tem piso:
+   setPosition nas três janelas redimensionáveis não deixa descer abaixo
+   de ShopApplication.PISO / CartApplication.PISO / AprimorarApplication.PISO,
+   então é só até essas faixas que o layout precisa aguentar.
+
+   Isto é um paliativo: as colunas e painéis menos essenciais somem em vez
+   de o layout se reorganizar de verdade.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Loja: faixa estreita (< 760px) ──────────────────────── */
+/* Coluna de peso sai primeiro: é a informação mais dispensável da
+   fileira, e o espaço vai para o nome do item. */
+.t20-loja-window.t20l-estreito .col-weight { display: none; }
+
+.t20-loja-window.t20l-estreito .shop-side-filters { width: 180px; }
+
+/* A busca deixa de ter largura fixa e divide a sobra com o resto da
+   linha, em vez de empurrar a contagem de itens para outra linha. */
+.t20-loja-window.t20l-estreito .shop-search-input {
+  width: auto;
+  min-width: 90px;
+  flex: 1 1 90px;
+}
+.t20-loja-window.t20l-estreito .shop-filters-row { gap: 8px; }
+.t20-loja-window.t20l-estreito .shop-wealth-bar { gap: 6px; }
+
+/* Ajuste de preço: o slider é o primeiro a ceder espaço; o campo
+   numérico ao lado continua dando o valor exato. */
+.t20-loja-window.t20l-estreito .sell-percent-group input[type="range"],
+.t20-loja-window.t20l-estreito .cart-discount input[type="range"] { width: 70px; }
+
+/* ── Loja: faixa muito estreita (< 560px) ────────────────── */
+/* No piso da janela não cabem painel lateral e fileira junto, então o
+   painel de filtros laterais sai e ficam a busca e os filtros de cima. */
+.t20-loja-window.t20l-muito-estreito .shop-side-filters { display: none; }
+.t20-loja-window.t20l-muito-estreito .col-type { display: none; }
+.t20-loja-window.t20l-muito-estreito .wealth-total { display: none; }
+.t20-loja-window.t20l-muito-estreito .shop-table td,
+.t20-loja-window.t20l-muito-estreito .shop-table thead th { padding-inline: 4px; }
+
+/* Rótulos "Preço"/"%" do carrinho saem; os controles bastam. */
+.t20-loja-window.t20l-muito-estreito .cart-discount label { display: none; }
+.t20-loja-window.t20l-muito-estreito .cart-discount input[type="range"] { width: 56px; }
+
+/* ── Aprimorar: faixa estreita ───────────────────────────── */
+/* Pagamento e conta deixam de dividir a linha. */
+.t20-loja-aprimorar.t20l-estreito .apr-rodape-colunas {
+  grid-template-columns: minmax(0, 1fr);
+}

@@ -1,0 +1,35 @@
+<!-- UMA tábua escura, lisa. Substitui o madeira-h.svg, que tinha uma
+     emenda no meio e um abaulado por tábua: ao ladrilhar, aquilo virava
+     várias tabuinhas empilhadas em vez de uma peça só.
+
+     Duas regras para manter o efeito de peça única:
+     1. NENHUMA emenda e NENHUM gradiente vertical aqui dentro. O relevo
+        das bordas é dado pelo CSS, só no topo e no pé do conjunto.
+     2. A variação vertical tem que ser fraca e de frequência baixa. O
+        balcão são dois elementos empilhados (.shop-wealth-bar e
+        .shop-filters), cada um reiniciando a textura na sua origem; com
+        veio marcado, esse reinício viraria uma emenda bem no meio. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+  <defs>
+    <filter id="veio" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.009 0.32" numOctaves="4" seed="41"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.34"/></feComponentTransfer>
+    </filter>
+    <filter id="suavizar" x="-20%" y="-60%" width="140%" height="220%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect width="320" height="200" fill="#4a3018"/>
+
+  <!-- Veias longas, acompanhando o comprimento da tábua -->
+  <g filter="url(#suavizar)">
+    <ellipse cx="110" cy="38"  rx="150" ry="3.5" fill="#2e1c0c" opacity=".3"/>
+    <ellipse cx="240" cy="72"  rx="130" ry="2.5" fill="#5e3f20" opacity=".3"/>
+    <ellipse cx="80"  cy="118" rx="170" ry="3"   fill="#2e1c0c" opacity=".26"/>
+    <ellipse cx="210" cy="158" rx="140" ry="2.5" fill="#5e3f20" opacity=".26"/>
+  </g>
+
+  <rect width="320" height="200" filter="url(#veio)" opacity=".34"/>
+</svg>

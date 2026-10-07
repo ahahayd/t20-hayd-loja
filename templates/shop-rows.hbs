@@ -1,0 +1,60 @@
+          {{#each items}}
+          <tr class="shop-item-row {{#if (eq ../mode "buy")}}{{#unless canAfford}}cannot-afford{{/unless}}{{/if}}">
+            <td class="col-img">
+              <img class="shop-item-img" src="{{img}}" alt="{{name}}" loading="lazy"
+                   data-uuid="{{uuid}}" draggable="true" title="Arrastar para cena/ficha">
+            </td>
+            <td class="col-name">
+              <span class="shop-item-name" title="Clique para abrir o item" data-uuid="{{uuid}}">{{name}}</span>
+              {{#if source}}<span class="item-source">{{source}}</span>{{/if}}
+            </td>
+            <td class="col-type"><span class="type-badge" data-tipo="{{typeKey}}">{{typeLabel}}</span></td>
+            <td class="col-weight">{{#if isSpell}}—{{else}}{{espacos}} Esp.{{/if}}</td>
+            <td class="col-price">
+              <span class="price-tag {{#if (eq ../mode "buy")}}{{#unless canAfford}}too-expensive{{/unless}}{{/if}}">
+                {{#if (eq ../mode "sell")}}
+                  {{sellPriceDisplay}}
+                {{else}}
+                  {{precoDisplay}}
+                {{/if}}
+              </span>
+            </td>
+            <td class="col-action">
+              {{#if (eq ../mode "sell")}}
+                <button class="btn-sell" data-item-id="{{itemId}}" title="Vender {{name}}">
+                  <i class="fas fa-hand-holding-usd"></i>
+                </button>
+              {{else if isSpell}}
+                <div class="buy-actions">
+                  <button class="btn-buy-spell {{#unless canAfford}}disabled{{/unless}}"
+                          data-uuid="{{uuid}}"
+                          {{#unless canAfford}}disabled title="Sem moedas suficientes"{{/unless}}
+                          title="Comprar {{name}} (poção ou pergaminho)">
+                    <i class="fas fa-hat-wizard"></i>
+                  </button>
+                  <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar {{name}} ao carrinho">
+                    <i class="fas fa-cart-plus"></i>
+                  </button>
+                  <button class="btn-craft-spell" data-uuid="{{uuid}}" title="Construir {{name}} (poção ou pergaminho)">
+                    <i class="fas fa-hammer"></i>
+                  </button>
+                </div>
+              {{else}}
+                <div class="buy-actions">
+                  <button class="btn-buy btn-buy-small {{#unless canAfford}}disabled{{/unless}}"
+                          data-uuid="{{uuid}}"
+                          {{#unless canAfford}}disabled title="Sem moedas suficientes"{{/unless}}
+                          title="Comprar {{name}}">
+                    <i class="fas fa-coins"></i>
+                  </button>
+                  <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar ao carrinho">
+                    <i class="fas fa-cart-plus"></i>
+                  </button>
+                  <button class="btn-craft" data-uuid="{{uuid}}" title="Construir {{name}}">
+                    <i class="fas fa-hammer"></i>
+                  </button>
+                </div>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}

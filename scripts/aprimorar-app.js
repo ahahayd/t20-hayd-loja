@@ -19,7 +19,7 @@
  * arquivos (se instalados) e as entradas vão para a descrição do item.
  */
 
-import { MODULE_ID } from './main.js';
+import { MODULE_ID, pisoDaJanela, observarLargura } from './main.js';
 import {
   getShopItems, debitarCarteira, cartaoLoja, linhaCartao, moedasChips, atorUsaPlatina,
   precoDisplay, linhaPagamento, getChatRecipients, toCobre,
@@ -182,6 +182,13 @@ export class AprimorarApplication extends Application {
       classes: ['t20-loja-window', 't20-loja-aprimorar'],
       scrollY: ['.apr-lista', '.apr-entradas'],
     });
+  }
+
+  /** Piso mínimo do redimensionamento (ver pisoDaJanela em main.js). */
+  static PISO = { width: 500, height: 440 };
+
+  setPosition(posicao = {}) {
+    return pisoDaJanela(this, super.setPosition, posicao, AprimorarApplication.PISO);
   }
 
   _resetConfig() {
@@ -545,6 +552,8 @@ export class AprimorarApplication extends Application {
     // segue o padrão das janelas do GMTools (ver styles/hayd-ui-base.css),
     // que é o que o Mestre já conhece do painel de engenhocas. O tema da
     // Loja continua valendo para a vitrine e o carrinho.
+
+    observarLargura(this);
 
     // Busca: só esconde linhas, sem re-render (preserva foco e scroll)
     html.find('.apr-busca').on('input', ev => {

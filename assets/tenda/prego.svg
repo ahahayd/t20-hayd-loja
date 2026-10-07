@@ -1,0 +1,45 @@
+<!-- Prego de ferro forjado, cabeça vista de cima.
+
+     Em 13–15px na tela, o que faz ler como prego não é o contorno nem o
+     número de facetas — é a SOMBRA que ele projeta na superfície mais o
+     BRILHO especular em cima. Por isso a cabeça aqui é uma calota
+     levemente irregular, sem traço de contorno (a primeira versão tinha
+     um stroke grosso e virou um brasão pentagonal), com:
+       · sombra de contato deslocada para baixo e à direita;
+       · gradiente de calota com a luz vindo de cima à esquerda;
+       · ponto especular forte;
+       · anel escuro na base, que é a madeira afundada em volta.
+     Tirar a sombra ou o especular devolve o "pontinho colorido". -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <defs>
+    <radialGradient id="calota" cx=".36" cy=".3" r=".78">
+      <stop offset="0"   stop-color="#f2eee6"/>
+      <stop offset=".18" stop-color="#c3bbac"/>
+      <stop offset=".5"  stop-color="#8e8578"/>
+      <stop offset=".8"  stop-color="#564e43"/>
+      <stop offset="1"   stop-color="#332e28"/>
+    </radialGradient>
+    <filter id="borrar" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.4"/>
+    </filter>
+  </defs>
+
+  <!-- Sombra projetada na superfície -->
+  <path d="M11.2 3.4c3.6.3 6.6 3.2 6.8 6.6.2 3.6-2.6 6.8-6.2 7.3-3.5.5-7.1-1.6-8.1-4.8C2.7 9.2 4.3 5.4 7.5 4.1c1.2-.5 2.5-.8 3.7-.7z"
+        fill="#000" opacity=".5" filter="url(#borrar)"/>
+
+  <!-- Madeira afundada em volta da cabeça -->
+  <path d="M10.3 2.1c3.5.2 6.5 2.9 6.9 6.2.4 3.5-2.1 6.9-5.6 7.6-3.4.7-7.1-1.2-8.3-4.4C2 8.2 3.4 4.4 6.6 2.9c1.2-.6 2.4-.8 3.7-.8z"
+        fill="#19140f" opacity=".55"/>
+
+  <!-- Calota: círculo propositalmente irregular, martelado à mão -->
+  <path d="M10.2 3c3 .2 5.6 2.5 5.9 5.3.3 3-1.8 5.9-4.8 6.5-2.9.6-6.1-1-7.1-3.7C3.1 8.3 4.3 5.1 7 3.8c1-.5 2.1-.8 3.2-.8z"
+        fill="url(#calota)"/>
+
+  <!-- Marca do martelo, afundada no meio -->
+  <ellipse cx="9.2" cy="9.4" rx="2.6" ry="2.1" transform="rotate(-18 9.2 9.4)" fill="#000" opacity=".2"/>
+  <!-- Aresta iluminada da batida -->
+  <path d="M6.4 11.6c1.3 1.5 3.6 2 5.3 1.1" stroke="#cfc8bb" stroke-width=".8" fill="none" opacity=".25" stroke-linecap="round"/>
+  <!-- Brilho especular -->
+  <ellipse cx="7.6" cy="6.4" rx="1.6" ry="1.2" transform="rotate(-30 7.6 6.4)" fill="#f4f0e8" opacity=".7"/>
+</svg>

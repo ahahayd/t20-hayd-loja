@@ -1,6 +1,25 @@
 {{!-- templates/shop.hbs — Janela principal da Loja --}}
 <div class="t20-loja-app">
 
+  {{!-- ── Lamparina pendurada (decorativa; só aparece no tema tenda) ── --}}
+  <div class="loja-lamp" aria-hidden="true">
+    <div class="loja-lamp__chain"></div>
+    {{!-- O corpo é um elemento à parte da corrente de propósito: o
+          pêndulo duplo gira os dois separadamente (ver lamparina.mjs). --}}
+    <div class="loja-lamp__body">
+      <div class="loja-lamp__ring"></div>
+      <div class="loja-lamp__cap"></div>
+      <div class="loja-lamp__glass">
+        <div class="loja-lamp__bar"></div>
+        <div class="loja-lamp__candle"></div>
+        <div class="loja-lamp__flame"></div>
+      </div>
+      <div class="loja-lamp__base"></div>
+      <div class="loja-lamp__tip"></div>
+    </div>
+    <div class="loja-lamp__glow"></div>
+  </div>
+
   {{!-- ── Cabeçalho: saldo do personagem ── --}}
   <div class="shop-wealth-bar">
     <span class="wealth-label"><i class="fas fa-coins"></i> Saldo de <strong>{{actor.name}}</strong>:</span>
@@ -272,68 +291,14 @@
           </tr>
         </thead>
         <tbody>
-          {{#each items}}
-          <tr class="shop-item-row {{#if (eq ../mode "buy")}}{{#unless canAfford}}cannot-afford{{/unless}}{{/if}}">
-            <td class="col-img">
-              <img class="shop-item-img" src="{{img}}" alt="{{name}}" loading="lazy"
-                   data-uuid="{{uuid}}" draggable="true" title="Arrastar para cena/ficha">
-            </td>
-            <td class="col-name">
-              <span class="shop-item-name" title="Clique para abrir o item" data-uuid="{{uuid}}">{{name}}</span>
-              {{#if source}}<span class="item-source">{{source}}</span>{{/if}}
-            </td>
-            <td class="col-type"><span class="type-badge">{{typeLabel}}</span></td>
-            <td class="col-weight">{{#if isSpell}}—{{else}}{{espacos}} Esp.{{/if}}</td>
-            <td class="col-price">
-              <span class="price-tag {{#if (eq ../mode "buy")}}{{#unless canAfford}}too-expensive{{/unless}}{{/if}}">
-                {{#if (eq ../mode "sell")}}
-                  {{sellPriceDisplay}}
-                {{else}}
-                  {{precoDisplay}}
-                {{/if}}
-              </span>
-            </td>
-            <td class="col-action">
-              {{#if (eq ../mode "sell")}}
-                <button class="btn-sell" data-item-id="{{itemId}}" title="Vender {{name}}">
-                  <i class="fas fa-hand-holding-usd"></i>
-                </button>
-              {{else if isSpell}}
-                <div class="buy-actions">
-                  <button class="btn-buy-spell {{#unless canAfford}}disabled{{/unless}}"
-                          data-uuid="{{uuid}}"
-                          {{#unless canAfford}}disabled title="Sem moedas suficientes"{{/unless}}
-                          title="Comprar {{name}} (poção ou pergaminho)">
-                    <i class="fas fa-hat-wizard"></i>
-                  </button>
-                  <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar {{name}} ao carrinho">
-                    <i class="fas fa-cart-plus"></i>
-                  </button>
-                  <button class="btn-craft-spell" data-uuid="{{uuid}}" title="Construir {{name}} (poção ou pergaminho)">
-                    <i class="fas fa-hammer"></i>
-                  </button>
-                </div>
-              {{else}}
-                <div class="buy-actions">
-                  <button class="btn-buy btn-buy-small {{#unless canAfford}}disabled{{/unless}}"
-                          data-uuid="{{uuid}}"
-                          {{#unless canAfford}}disabled title="Sem moedas suficientes"{{/unless}}
-                          title="Comprar {{name}}">
-                    <i class="fas fa-coins"></i>
-                  </button>
-                  <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar ao carrinho">
-                    <i class="fas fa-cart-plus"></i>
-                  </button>
-                  <button class="btn-craft" data-uuid="{{uuid}}" title="Construir {{name}}">
-                    <i class="fas fa-hammer"></i>
-                  </button>
-                </div>
-              {{/if}}
-            </td>
-          </tr>
-          {{/each}}
+          {{> "modules/t20-hayd-loja/templates/shop-rows.hbs"}}
         </tbody>
       </table>
+
+      {{!-- Rolagem infinita: as próximas páginas entram aqui pelo scroll --}}
+      <div class="shop-more-indicator" {{#unless hasMore}}hidden{{/unless}}>
+        <i class="fas fa-angle-double-down"></i> Role para carregar mais itens…
+      </div>
 
     {{else}}
       <div class="shop-empty">

@@ -1,0 +1,43 @@
+<!-- Toldo da tenda: ladrilho horizontal (repeat-x) com duas listras e dois
+     festões. Inclui sanefa no topo, trama de lona, vinco entre as listras e
+     sombreado de volume. Largura do ladrilho = 2 listras de 40. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="70" viewBox="0 0 80 70">
+  <defs>
+    <!-- Volume da lona: sombra na sanefa, luz no terço superior, sombra no bico -->
+    <linearGradient id="volume" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#000" stop-opacity=".34"/>
+      <stop offset=".14"  stop-color="#000" stop-opacity=".05"/>
+      <stop offset=".40"  stop-color="#fff" stop-opacity=".16"/>
+      <stop offset=".72"  stop-color="#000" stop-opacity=".05"/>
+      <stop offset="1"    stop-color="#000" stop-opacity=".18"/>
+    </linearGradient>
+    <!-- Vinco nas bordas de cada listra (a lona dobra ali) -->
+    <linearGradient id="vinco" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"    stop-color="#000" stop-opacity=".12"/>
+      <stop offset=".16"  stop-color="#000" stop-opacity="0"/>
+      <stop offset=".84"  stop-color="#000" stop-opacity="0"/>
+      <stop offset="1"    stop-color="#000" stop-opacity=".12"/>
+    </linearGradient>
+    <!-- Trama da lona -->
+    <pattern id="trama" width="3" height="3" patternUnits="userSpaceOnUse">
+      <path d="M0 .5h3" stroke="#000" stroke-opacity=".055" stroke-width="1"/>
+      <path d="M.5 0v3" stroke="#fff" stroke-opacity=".05"  stroke-width="1"/>
+    </pattern>
+    <!-- Silhueta: corpo reto + dois festões arredondados -->
+    <clipPath id="lona">
+      <path d="M0 0 H80 V48 A20 20 0 0 1 40 48 A20 20 0 0 1 0 48 Z"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#lona)">
+    <rect x="0"  y="0" width="40" height="70" fill="#9d2026"/>
+    <rect x="40" y="0" width="40" height="70" fill="#f2e7cb"/>
+    <rect x="0"  y="0" width="40" height="70" fill="url(#vinco)"/>
+    <rect x="40" y="0" width="40" height="70" fill="url(#vinco)"/>
+    <rect x="0"  y="0" width="80" height="70" fill="url(#trama)"/>
+    <rect x="0"  y="0" width="80" height="70" fill="url(#volume)"/>
+    <!-- Sanefa: a vara de madeira que segura a lona -->
+    <rect x="0" y="0" width="80" height="7" fill="#5e1316"/>
+    <rect x="0" y="6" width="80" height="1" fill="#fff" opacity=".12"/>
+  </g>
+</svg>

@@ -1,0 +1,66 @@
+<!-- Parede de tábuas da tenda (fundo de tudo). Ladrilho 256x384.
+
+     O que evita o "loop" visível, que é o defeito clássico de textura
+     ladrilhada: as tábuas têm larguras diferentes (46/58/40/62/50), cada
+     uma tem cor própria, e as emendas de topo estão em alturas
+     escalonadas — nenhuma linha horizontal atravessa a parede inteira.
+     Mexer nessas larguras exige refazer a soma 256, senão a emenda
+     lateral do ladrilho aparece. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="384" viewBox="0 0 256 384">
+  <defs>
+    <filter id="veio" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.55 0.009" numOctaves="4" seed="23"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+    </filter>
+    <linearGradient id="abaulado" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"   stop-color="#000" stop-opacity=".55"/>
+      <stop offset=".12" stop-color="#000" stop-opacity=".10"/>
+      <stop offset=".48" stop-color="#fff" stop-opacity=".06"/>
+      <stop offset=".88" stop-color="#000" stop-opacity=".12"/>
+      <stop offset="1"   stop-color="#000" stop-opacity=".55"/>
+    </linearGradient>
+    <radialGradient id="no" cx=".5" cy=".5" r=".5">
+      <stop offset="0"   stop-color="#1d1107"/>
+      <stop offset=".45" stop-color="#2b1a0b"/>
+      <stop offset=".72" stop-color="#4a301a"/>
+      <stop offset="1"   stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Tábuas, cada uma com seu tom -->
+  <rect x="0"   y="0" width="46" height="384" fill="#3b2512"/>
+  <rect x="46"  y="0" width="58" height="384" fill="#31200f"/>
+  <rect x="104" y="0" width="40" height="384" fill="#412a14"/>
+  <rect x="144" y="0" width="62" height="384" fill="#2d1c0c"/>
+  <rect x="206" y="0" width="50" height="384" fill="#382310"/>
+
+  <!-- Veio -->
+  <rect width="256" height="384" filter="url(#veio)" opacity=".45"/>
+
+  <!-- Nós da madeira -->
+  <ellipse cx="28"  cy="196" rx="9"  ry="13" fill="url(#no)"/>
+  <ellipse cx="176" cy="312" rx="7"  ry="10" fill="url(#no)"/>
+  <ellipse cx="122" cy="74"  rx="6"  ry="9"  fill="url(#no)"/>
+
+  <!-- Emendas de topo, escalonadas: cada uma só na sua tábua -->
+  <g>
+    <rect x="0"   y="250" width="46" height="2" fill="#191007" opacity=".85"/>
+    <rect x="0"   y="252" width="46" height="1" fill="#fff" opacity=".07"/>
+    <rect x="46"  y="96"  width="58" height="2" fill="#191007" opacity=".85"/>
+    <rect x="46"  y="98"  width="58" height="1" fill="#fff" opacity=".07"/>
+    <rect x="104" y="318" width="40" height="2" fill="#191007" opacity=".85"/>
+    <rect x="104" y="320" width="40" height="1" fill="#fff" opacity=".07"/>
+    <rect x="144" y="168" width="62" height="2" fill="#191007" opacity=".85"/>
+    <rect x="144" y="170" width="62" height="1" fill="#fff" opacity=".07"/>
+    <rect x="206" y="40"  width="50" height="2" fill="#191007" opacity=".85"/>
+    <rect x="206" y="42"  width="50" height="1" fill="#fff" opacity=".07"/>
+  </g>
+
+  <!-- Abaulado por tábua: escurece as juntas e ilumina o meio -->
+  <rect x="0"   y="0" width="46" height="384" fill="url(#abaulado)"/>
+  <rect x="46"  y="0" width="58" height="384" fill="url(#abaulado)"/>
+  <rect x="104" y="0" width="40" height="384" fill="url(#abaulado)"/>
+  <rect x="144" y="0" width="62" height="384" fill="url(#abaulado)"/>
+  <rect x="206" y="0" width="50" height="384" fill="url(#abaulado)"/>
+</svg>

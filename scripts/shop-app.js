@@ -12,8 +12,9 @@
  *   1 TC = 1 cobre | 1 TP = 10 cobre | 1 TO = 100 cobre
  */
 
-import { MODULE_ID, aplicarTemaLoja } from './main.js';
+import { MODULE_ID, aplicarTemaLoja, botoesCabecalhoComTema, pisoDaJanela, observarLargura, lampiaoLigado } from './main.js';
 import { AprimorarApplication } from './aprimorar-app.js';
+import { agitarLamparina } from './lamparina.mjs';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -37,6 +38,8 @@ const TYPE_LABELS = {
   poder      : 'Poder',
   magia      : 'Magia',
   tormenta20weapon : 'Arma',
+  tesouro    : 'Tesouro',
+  equipamento: 'Equipamento',
 };
 
 const WEAPON_PROPERTIES = ['propriedades.ada', 'propriedades.agi', 'propriedades.alo', 'propriedades.des', 'propriedades.dupla', 'propriedades.ver', 'propriedades.hib'];
@@ -66,6 +69,27 @@ function isSpellType(type) {
 
 function typeLabel(type) {
   return TYPE_LABELS[type] ?? type ?? 'Item';
+}
+
+/**
+ * Família de cada tipo de item, usada SÓ para a cor da etiqueta "Tipo"
+ * na vitrine (ver .type-badge[data-tipo] em styles/tenda.css). Agrupa os
+ * sinônimos do sistema — weapon/arma, consumable/consumivel,
+ * spell/magia — para não existir uma cor por grafia. Tipo desconhecido
+ * cai em 'outro', que tem cor neutra: nenhum item fica sem etiqueta.
+ */
+const TYPE_FAMILIES = {
+  weapon: 'arma', arma: 'arma', tormenta20weapon: 'arma',
+  armor: 'protecao', armadura: 'protecao',
+  equipment: 'equipamento', tool: 'equipamento', backpack: 'equipamento',
+  consumable: 'consumivel', consumivel: 'consumivel',
+  loot: 'tesouro', tesouro: 'tesouro',
+  spell: 'magia', magia: 'magia',
+  feat: 'poder', poder: 'poder',
+};
+
+function typeKey(type) {
+  return TYPE_FAMILIES[type] ?? 'outro';
 }
 
 /** Preço (em TP) de um pergaminho/poção-base para `custoPM` PM investidos. */
@@ -592,6 +616,7 @@ function formatItem(doc) {
     img         : doc.img ?? 'icons/svg/item-bag.svg',
     type        : doc.type,
     typeLabel   : label,
+    typeKey     : typeKey(doc.type),
     preco,
     precoDisplay: precoDisplayText,
     espacos,
@@ -750,6 +775,14 @@ export class ShopApplication extends Application {
     this._sideFilterScroll = 0;
     this._cartItems = new Map();
     this._cartApp = null;
+    /** Quantas linhas são desenhadas por página de rolagem */
+    this._pageSize = 30;
+    /** Quantas linhas estão desenhadas agora */
+    this._visibleCount = 30;
+    /** Assinatura dos filtros do último render (ver _filterSignature) */
+    this._lastFilterSignature = null;
+    /** @type {boolean} Há uma página sendo injetada no tbody */
+    this._appending = false;
     /** @type {number|null} Timer de debounce da busca */
     this._searchTimer = null;
 
@@ -762,10 +795,14 @@ export class ShopApplication extends Application {
   }
 
   async close(options = {}) {
+    this._observadorLargura?.disconnect();
+    this._observadorLargura = null;
     if (this._actorUpdateHook) {
       Hooks.off('updateActor', this._actorUpdateHook);
       this._actorUpdateHook = null;
     }
+    this._lamparina?.destroy();
+    this._lamparina = null;
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
@@ -796,6 +833,18 @@ export class ShopApplication extends Application {
     });
   }
 
+  /** Piso mínimo do redimensionamento (ver pisoDaJanela em main.js). */
+  static PISO = { width: 620, height: 420 };
+
+  setPosition(posicao = {}) {
+    return pisoDaJanela(this, super.setPosition, posicao, ShopApplication.PISO);
+  }
+
+  /** Atalho "Alterar tema" ao lado do fechar (só para o mestre). */
+  _getHeaderButtons() {
+    return botoesCabecalhoComTema(super._getHeaderButtons());
+  }
+
   /* ── getData ────────────────────────────────── */
   async getData() {
     // Carrega itens na primeira vez (ou se ainda não carregou)
@@ -803,41 +852,22 @@ export class ShopApplication extends Application {
       await this._loadAllItems();
     }
 
-    const wealth    = this._wealthInfo();
-    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
-    const isSellMode = this._mode === 'sell';
+    /* Pipeline do modo ATIVO (filtro + ordenação). Só a PRIMEIRA PÁGINA é
+     * clonada e desenhada — desenhar as ~2 mil linhas de uma vez era o
+     * custo dominante de cada render (abertura, tecla de busca, compra).
+     * O resto entra conforme o scroll, em _carregarMaisItens. */
+    const { wealth, list, totalItems, decorate } = this._listaVisivel();
 
-    /* Só o pipeline do modo ATIVO roda — antes compra e venda eram
-     * computadas (filtro + sort + clone de milhares de itens) em todo
-     * render, e metade era descartada. */
-    let items, totalItems;
-    if (isSellMode) {
-      const sellFiltered = this._applyFilters(this._getSellItems());
-      items = this._applySort(sellFiltered).map(item => ({
-        ...item,
-        sellPriceDisplay: precoDisplay(item.sellPrice),
-      }));
-      totalItems = sellFiltered.length;
-    } else {
-      // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado
-      let filtered = this._applyFilters(this._getSortedAll());
-      if (this._hideSpells) filtered = filtered.filter(item => !item.isSpell);
-      // O contador sempre reflete o filtro de busca/tipo/tags/magias (como
-      // antes, sem considerar o "posso pagar")
-      totalItems = filtered.length;
-      // Percentual de preço do modo compra (desconto/acréscimo do mestre)
-      const fator = this._buyPercent / 100;
-      const custoCobre = item => Math.round(item.preco * fator * 10);
-      // Com "só o que posso pagar", filtra ANTES de clonar os objetos
-      const visiveis = this._affordableOnly
-        ? filtered.filter(item => totalCopper >= custoCobre(item))
-        : filtered;
-      items = visiveis.map(item => ({
-        ...item,
-        canAfford : totalCopper >= custoCobre(item),
-        ...(fator !== 1 && !item.isSpell ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
-      }));
+    /* Mudança de filtro/ordem/modo recomeça a paginação do topo; nos outros
+     * re-renders (compra, venda, dinheiro) o número de linhas é mantido,
+     * senão a lista encurtaria embaixo do usuário. */
+    const assinatura = this._filterSignature();
+    if (assinatura !== this._lastFilterSignature) {
+      this._lastFilterSignature = assinatura;
+      this._visibleCount = this._pageSize;
     }
+
+    const items = list.slice(0, this._visibleCount).map(decorate);
 
     // Coleta tipos únicos para o filtro
     const types = [...new Set(this._allItems.map(i => i.type))]
@@ -860,9 +890,114 @@ export class ShopApplication extends Application {
       affordableOnly: this._affordableOnly,
       hideSpells : this._hideSpells,
       filterMatch: this._filterMatch,
+      hasMore    : list.length > items.length,
     };
   }
 
+  /* ── Paginação da lista ─────────────────────── */
+
+  /** Estado que, ao mudar, devolve a lista para a primeira página. */
+  _filterSignature() {
+    return JSON.stringify([
+      this._mode, this._search, this._typeFilter, this._sortBy,
+      this._hideSpells, this._affordableOnly, this._buyPercent, this._sellPercent,
+      this._filterMatch, Array.from(this._filterTags).sort(),
+    ]);
+  }
+
+  /**
+   * Lista filtrada/ordenada do modo ativo SEM clonar os itens: `decorate`
+   * monta o objeto de exibição só para as linhas que serão desenhadas.
+   */
+  _listaVisivel() {
+    const wealth = this._wealthInfo();
+    const totalCopper = toCobre(wealth.to, wealth.tp, wealth.tc);
+
+    if (this._mode === 'sell') {
+      const filtered = this._applyFilters(this._getSellItems());
+      return {
+        wealth,
+        list      : this._applySort(filtered),
+        totalItems: filtered.length,
+        decorate  : item => ({ ...item, sellPriceDisplay: precoDisplay(item.sellPrice) }),
+      };
+    }
+
+    // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado
+    let filtered = this._applyFilters(this._getSortedAll());
+    if (this._hideSpells) filtered = filtered.filter(item => !item.isSpell);
+    // O contador sempre reflete o filtro de busca/tipo/tags/magias (como
+    // antes, sem considerar o "posso pagar")
+    const totalItems = filtered.length;
+    // Percentual de preço do modo compra (desconto/acréscimo do mestre)
+    const fator = this._buyPercent / 100;
+    const custoCobre = item => Math.round(item.preco * fator * 10);
+    const list = this._affordableOnly
+      ? filtered.filter(item => totalCopper >= custoCobre(item))
+      : filtered;
+
+    return {
+      wealth, list, totalItems,
+      decorate: item => ({
+        ...item,
+        canAfford : totalCopper >= custoCobre(item),
+        ...(fator !== 1 && !item.isSpell ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
+      }),
+    };
+  }
+
+  /** Injeta a próxima página de linhas no tbody, sem re-render da janela. */
+  async _carregarMaisItens() {
+    if (this._appending || !this.rendered) return;
+    const tbody = this.element?.find?.('.shop-table tbody');
+    if (!tbody || !tbody.length) return;
+
+    const { list, decorate } = this._listaVisivel();
+    const inicio = this._visibleCount;
+    if (inicio >= list.length) {
+      this._marcarTemMais(false);
+      return;
+    }
+
+    this._appending = true;
+    try {
+      const fatia = list.slice(inicio, inicio + this._pageSize).map(decorate);
+      const render = foundry.applications?.handlebars?.renderTemplate ?? renderTemplate;
+      const html = await render(`modules/${MODULE_ID}/templates/shop-rows.hbs`, {
+        items: fatia,
+        mode : this._mode,
+      });
+      tbody.append(html);
+      this._visibleCount = inicio + fatia.length;
+      /* A assinatura é regravada para o próximo getData não achar que os
+       * filtros mudaram e jogar a lista de volta para 30 itens. */
+      this._lastFilterSignature = this._filterSignature();
+      this._marcarTemMais(this._visibleCount < list.length);
+    } finally {
+      this._appending = false;
+    }
+  }
+
+  /** Mostra/esconde o aviso de "role para carregar mais". */
+  _marcarTemMais(temMais) {
+    const aviso = this.element?.find?.('.shop-more-indicator');
+    if (aviso && aviso.length) aviso.attr('hidden', temMais ? null : 'hidden');
+  }
+
+  /**
+   * Em janelas altas 30 linhas podem não gerar barra de rolagem — sem ela o
+   * usuário não teria como pedir o resto. Completa até dar para rolar.
+   */
+  async _preencherAteRolar(tentativas = 6) {
+    for (let i = 0; i < tentativas; i++) {
+      const el = this.element?.find?.('.shop-items-list')?.[0];
+      if (!el) return;
+      if (el.scrollHeight > el.clientHeight + 40) return;
+      const antes = this._visibleCount;
+      await this._carregarMaisItens();
+      if (this._visibleCount === antes) return;
+    }
+  }
   /* ── Carregamento de itens ──────────────────── */
   async _loadAllItems() {
     this._loading = true;
@@ -908,6 +1043,7 @@ export class ShopApplication extends Application {
         img        : item.img ?? 'icons/svg/item-bag.svg',
         type       : item.type,
         typeLabel  : typeLabel(item.type),
+        typeKey    : typeKey(item.type),
         preco,
         qtd,
         sellPrice,
@@ -936,6 +1072,8 @@ export class ShopApplication extends Application {
       const dialog = new Dialog({
         title,
         content,
+        // Herda o tema da Loja: um diálogo cinza sobre a janela de
+        // pergaminho é a mesma loja parecendo dois programas diferentes.
         buttons: {
           confirm: {
             icon: '<i class="fas fa-check"></i>',
@@ -1807,6 +1945,15 @@ export class ShopApplication extends Application {
   activateListeners(html) {
     super.activateListeners(html);
     aplicarTemaLoja(this, this.actor);
+    observarLargura(this);
+
+    // Agitação da lamparina. Recriada a cada render porque o DOM é novo;
+    // sem o destroy anterior, cada re-render deixaria um rAF rodando
+    // sobre um elemento que não existe mais.
+    this._lamparina?.destroy();
+    this._lamparina = lampiaoLigado()
+      ? agitarLamparina(this.element?.[0], html[0] ?? html)
+      : null;
 
     // Pesquisa
     const searchInputEl = html.find('.shop-search-input');
@@ -1844,41 +1991,50 @@ export class ShopApplication extends Application {
       this.render();
     });
 
+    /* Ações das linhas: DELEGADAS no container da lista. As linhas que
+     * entram pela rolagem infinita não passam por activateListeners, então
+     * handlers presos a cada botão não valeriam para elas. */
+    const lista = html.find('.shop-items-list');
+
     // Botão Comprar
-    html.find('.btn-buy').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      this._purchaseItem(uuid);
+    lista.on('click', '.btn-buy', ev => {
+      this._purchaseItem(ev.currentTarget.dataset.uuid);
     });
 
     // Botão Comprar (magia — abre escolha de poção/pergaminho)
-    html.find('.btn-buy-spell').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      this._purchaseSpell(uuid);
+    lista.on('click', '.btn-buy-spell', ev => {
+      this._purchaseSpell(ev.currentTarget.dataset.uuid);
     });
 
     // Botão Carrinho
-    html.find('.btn-cart').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      this._addToCart(uuid);
+    lista.on('click', '.btn-cart', ev => {
+      this._addToCart(ev.currentTarget.dataset.uuid);
     });
 
     // Botão Construir
-    html.find('.btn-craft').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      this._craftItem(uuid);
+    lista.on('click', '.btn-craft', ev => {
+      this._craftItem(ev.currentTarget.dataset.uuid);
     });
 
     // Botão Construir (magia — abre escolha de poção/pergaminho, depois fabricação)
-    html.find('.btn-craft-spell').on('click', ev => {
-      const uuid = ev.currentTarget.dataset.uuid;
-      this._craftSpell(uuid);
+    lista.on('click', '.btn-craft-spell', ev => {
+      this._craftSpell(ev.currentTarget.dataset.uuid);
     });
 
     // Botão Vender
-    html.find('.btn-sell').on('click', ev => {
-      const itemId = ev.currentTarget.dataset.itemId;
-      this._sellItem(itemId);
+    lista.on('click', '.btn-sell', ev => {
+      this._sellItem(ev.currentTarget.dataset.itemId);
     });
+
+    /* Rolagem infinita: ao chegar perto do fim, injeta a próxima página. */
+    lista.on('scroll', ev => {
+      const el = ev.currentTarget;
+      if (el.scrollTop + el.clientHeight < el.scrollHeight - 240) return;
+      this._carregarMaisItens();
+    });
+
+    // Janela alta demais para uma página só: completa até haver rolagem.
+    requestAnimationFrame(() => this._preencherAteRolar());
 
     // Alternar modo
     html.find('.shop-mode-toggle button').on('click', ev => {
@@ -2102,8 +2258,8 @@ export class ShopApplication extends Application {
       this.render();
     });
 
-    // Expandir/colapsar descrição do item
-    html.find('.shop-item-name').on('click', async ev => {
+    // Abrir a ficha do item (delegado, ver nota acima)
+    html.find('.shop-items-list').on('click', '.shop-item-name', async ev => {
       const uuid = ev.currentTarget.dataset.uuid;
       if (!uuid) return;
       const item = await fromUuid(uuid);
@@ -2113,7 +2269,7 @@ export class ShopApplication extends Application {
     });
 
     // Drag de item (para arrastar para fichas, cenas, etc.)
-    html.find('.shop-item-img').on('dragstart', ev => {
+    html.find('.shop-items-list').on('dragstart', '.shop-item-img', ev => {
       const uuid = ev.currentTarget.dataset.uuid;
       ev.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({ type: 'Item', uuid }));
     });
@@ -2141,6 +2297,13 @@ class CartApplication extends Application {
     });
   }
 
+  /** Piso mínimo do redimensionamento (ver pisoDaJanela em main.js). */
+  static PISO = { width: 400, height: 340 };
+
+  setPosition(posicao = {}) {
+    return pisoDaJanela(this, super.setPosition, posicao, CartApplication.PISO);
+  }
+
   async getData() {
     const items = Array.from(this.shopApp._cartItems.values());
     const totals = calculateCartTotals(items, this._discountPercent);
@@ -2155,12 +2318,15 @@ class CartApplication extends Application {
 
   close(options = {}) {
     this._closed = true;
+    this._observadorLargura?.disconnect();
+    this._observadorLargura = null;
     return super.close(options);
   }
 
   activateListeners(html) {
     super.activateListeners(html);
     aplicarTemaLoja(this, this.shopApp.actor);
+    observarLargura(this);
 
     html.find('.btn-remove-cart-item').on('click', ev => {
       const key = ev.currentTarget.dataset.key;

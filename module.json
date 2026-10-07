@@ -19,6 +19,9 @@
   "styles": [
     {
       "src": "styles/shop.css"
+    },
+    {
+      "src": "styles/tenda.css"
     }
   ],
   "languages": [

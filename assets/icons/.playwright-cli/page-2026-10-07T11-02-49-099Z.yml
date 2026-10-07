@@ -1,0 +1,768 @@
+- generic [ref=f8e2]:
+  - banner [ref=f8e3]:
+    - heading "Loja" [level=4] [ref=f8e4]
+    - generic [ref=f8e5]:
+      - generic [ref=f8e6]: 
+      - text: Fechar
+  - generic [ref=f8e8]:
+    - generic [ref=f8e9]:
+      - generic [ref=f8e10]:
+        - generic [ref=f8e11]: 
+        - text: Saldo de
+        - strong [ref=f8e12]: Ezra
+        - text: ":"
+      - generic [ref=f8e13]:
+        - text: "2"
+        - generic [ref=f8e14]: TO
+      - generic [ref=f8e15]:
+        - text: "552"
+        - generic [ref=f8e16]: TP
+      - generic [ref=f8e17]:
+        - text: "7"
+        - generic [ref=f8e18]: TC
+      - generic [ref=f8e19]: (= 572.7 TP total)
+      - button " Itens Superiores e Encantados" [ref=f8e20] [cursor=pointer]:
+        - generic [ref=f8e21]: 
+        - text: Itens Superiores e Encantados
+      - button "" [ref=f8e22] [cursor=pointer]
+    - generic [ref=f8e24]:
+      - generic [ref=f8e25]:
+        - generic [ref=f8e26]:
+          - button " Comprar" [ref=f8e27] [cursor=pointer]:
+            - generic [ref=f8e28]: 
+            - generic [ref=f8e29]: Comprar
+          - button " Vender" [ref=f8e30] [cursor=pointer]:
+            - generic [ref=f8e31]: 
+            - generic [ref=f8e32]: Vender
+        - generic [ref=f8e33]:
+          - generic [ref=f8e34]: 
+          - textbox "Buscar item…" [ref=f8e35]
+        - generic [ref=f8e36]:
+          - generic [ref=f8e37]: Ordenar
+          - combobox [ref=f8e38]:
+            - option "Nome" [selected]
+        - generic [ref=f8e39]: 1026 itens
+      - generic [ref=f8e40]:
+        - generic [ref=f8e41]:
+          - generic [ref=f8e42]:
+            - checkbox "Somente itens que posso comprar" [checked] [ref=f8e43]
+            - generic [ref=f8e44]: Somente itens que posso comprar
+          - generic [ref=f8e45]:
+            - checkbox "Não exibir magias" [ref=f8e46]
+            - generic [ref=f8e47]: Não exibir magias
+        - generic [ref=f8e48]:
+          - generic [ref=f8e49]: Preço
+          - button "−10" [ref=f8e50] [cursor=pointer]
+          - slider [ref=f8e51]: "100"
+          - button "+10" [ref=f8e52] [cursor=pointer]
+          - spinbutton [ref=f8e53]: "100"
+          - generic [ref=f8e54]: "%"
+    - generic [ref=f8e55]:
+      - complementary [ref=f8e56]:
+        - generic [ref=f8e57]:
+          - generic [ref=f8e58]: 
+          - generic [ref=f8e59]: Filtros avançados
+          - button "" [ref=f8e60] [cursor=pointer]
+        - generic [ref=f8e62]:
+          - generic [ref=f8e63]:
+            - radio "Qualquer filtro" [checked] [ref=f8e64]
+            - generic [ref=f8e65]: Qualquer filtro
+          - generic [ref=f8e66]:
+            - radio "Todos os filtros" [ref=f8e67]
+            - generic [ref=f8e68]: Todos os filtros
+        - group [ref=f8e69]:
+          - generic "Armas" [ref=f8e70] [cursor=pointer]:
+            - checkbox [ref=f8e73]
+        - group [ref=f8e74]:
+          - generic "Equipamento" [ref=f8e75] [cursor=pointer]:
+            - checkbox [ref=f8e78]
+          - generic [ref=f8e80]:
+            - generic [ref=f8e81]: Tipo
+            - generic [ref=f8e82]:
+              - checkbox "Escudo" [ref=f8e83]
+              - generic [ref=f8e84]: Escudo
+            - generic [ref=f8e85]:
+              - checkbox "Armadura leve" [ref=f8e86]
+              - generic [ref=f8e87]: Armadura leve
+        - group [ref=f8e88]:
+          - generic "Tesouro" [ref=f8e89] [cursor=pointer]:
+            - checkbox [ref=f8e92]
+        - group [ref=f8e93]:
+          - generic "Consumíveis" [ref=f8e94] [cursor=pointer]:
+            - checkbox [ref=f8e97]
+        - group [ref=f8e98]:
+          - generic "Magias" [ref=f8e99] [cursor=pointer]:
+            - checkbox [ref=f8e102]
+      - table [ref=f8e104]:
+        - rowgroup [ref=f8e105]:
+          - row [ref=f8e106]:
+            - columnheader [ref=f8e107]
+            - columnheader "Item" [ref=f8e108]
+            - columnheader "Tipo" [ref=f8e109]
+            - columnheader "Peso" [ref=f8e110]
+            - columnheader "Preço" [ref=f8e111]
+            - columnheader [ref=f8e112]
+        - rowgroup [ref=f8e113]:
+          - row [ref=f8e114]:
+            - cell [ref=f8e115]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e117]:
+              - text: Ábaco
+              - generic [ref=f8e118]: T20 — Heróis de Arton (pág. 227)
+            - cell "Arma" [ref=f8e119]
+            - cell "1 Esp." [ref=f8e121]
+            - cell "45 TP" [ref=f8e122]
+            - cell [ref=f8e123]:
+              - generic [ref=f8e124]:
+                - button "" [ref=f8e125] [cursor=pointer]
+                - button "" [ref=f8e127] [cursor=pointer]
+                - button "" [ref=f8e129] [cursor=pointer]
+          - row [ref=f8e131]:
+            - cell [ref=f8e132]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e134]:
+              - text: Ábaco
+              - generic [ref=f8e135]: T20 — Heróis de Arton (pág. 227)
+            - cell "Armadura" [ref=f8e136]
+            - cell "1 Esp." [ref=f8e138]
+            - cell "45 TP" [ref=f8e139]
+            - cell [ref=f8e140]:
+              - generic [ref=f8e141]:
+                - button "" [ref=f8e142] [cursor=pointer]
+                - button "" [ref=f8e144] [cursor=pointer]
+                - button "" [ref=f8e146] [cursor=pointer]
+          - row [ref=f8e148]:
+            - cell [ref=f8e149]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e151]:
+              - text: Ábaco
+              - generic [ref=f8e152]: T20 — Heróis de Arton (pág. 227)
+            - cell "Equipamento" [ref=f8e153]
+            - cell "1 Esp." [ref=f8e155]
+            - cell "45 TP" [ref=f8e156]
+            - cell [ref=f8e157]:
+              - generic [ref=f8e158]:
+                - button "" [ref=f8e159] [cursor=pointer]
+                - button "" [ref=f8e161] [cursor=pointer]
+                - button "" [ref=f8e163] [cursor=pointer]
+          - row [ref=f8e165]:
+            - cell [ref=f8e166]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e168]:
+              - text: Ábaco
+              - generic [ref=f8e169]: T20 — Heróis de Arton (pág. 227)
+            - cell "Consumível" [ref=f8e170]
+            - cell "1 Esp." [ref=f8e172]
+            - cell "45 TP" [ref=f8e173]
+            - cell [ref=f8e174]:
+              - generic [ref=f8e175]:
+                - button "" [ref=f8e176] [cursor=pointer]
+                - button "" [ref=f8e178] [cursor=pointer]
+                - button "" [ref=f8e180] [cursor=pointer]
+          - row [ref=f8e182]:
+            - cell [ref=f8e183]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e185]:
+              - text: Ábaco
+              - generic [ref=f8e186]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e187]
+            - cell "1 Esp." [ref=f8e189]
+            - cell "45 TP" [ref=f8e190]
+            - cell [ref=f8e191]:
+              - generic [ref=f8e192]:
+                - button "" [ref=f8e193] [cursor=pointer]
+                - button "" [ref=f8e195] [cursor=pointer]
+                - button "" [ref=f8e197] [cursor=pointer]
+          - row [ref=f8e199]:
+            - cell [ref=f8e200]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e202]:
+              - text: Ábaco
+              - generic [ref=f8e203]: T20 — Heróis de Arton (pág. 227)
+            - cell "Magia" [ref=f8e204]
+            - cell "1 Esp." [ref=f8e206]
+            - cell "45 TP" [ref=f8e207]
+            - cell [ref=f8e208]:
+              - generic [ref=f8e209]:
+                - button "" [ref=f8e210] [cursor=pointer]
+                - button "" [ref=f8e212] [cursor=pointer]
+                - button "" [ref=f8e214] [cursor=pointer]
+          - row [ref=f8e216]:
+            - cell [ref=f8e217]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e219]:
+              - text: Ábaco
+              - generic [ref=f8e220]: T20 — Heróis de Arton (pág. 227)
+            - cell "Poder" [ref=f8e221]
+            - cell "1 Esp." [ref=f8e223]
+            - cell "45 TP" [ref=f8e224]
+            - cell [ref=f8e225]:
+              - generic [ref=f8e226]:
+                - button "" [ref=f8e227] [cursor=pointer]
+                - button "" [ref=f8e229] [cursor=pointer]
+                - button "" [ref=f8e231] [cursor=pointer]
+          - row [ref=f8e233]:
+            - cell [ref=f8e234]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e236]:
+              - text: Ábaco
+              - generic [ref=f8e237]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e238]
+            - cell "1 Esp." [ref=f8e240]
+            - cell "45 TP" [ref=f8e241]
+            - cell [ref=f8e242]:
+              - generic [ref=f8e243]:
+                - button "" [ref=f8e244] [cursor=pointer]
+                - button "" [ref=f8e246] [cursor=pointer]
+                - button "" [ref=f8e248] [cursor=pointer]
+          - row [ref=f8e250]:
+            - cell [ref=f8e251]
+            - cell "Abençoar Alimentos Tormenta20 — Edição Jogo do Ano (pág. 184)" [ref=f8e253]:
+              - text: Abençoar Alimentos
+              - generic [ref=f8e254]: Tormenta20 — Edição Jogo do Ano (pág. 184)
+            - cell "Magia" [ref=f8e255]
+            - cell "—" [ref=f8e257]
+            - cell "A partir de 30 TP" [ref=f8e258]
+            - cell [ref=f8e259]:
+              - generic [ref=f8e260]:
+                - button "" [ref=f8e261] [cursor=pointer]
+                - button "" [ref=f8e263] [cursor=pointer]
+                - button "" [ref=f8e265] [cursor=pointer]
+          - row [ref=f8e267]:
+            - cell [ref=f8e268]
+            - cell "Abraço da Noite T20 — Deuses de Arton (pág. 52)" [ref=f8e270]:
+              - text: Abraço da Noite
+              - generic [ref=f8e271]: T20 — Deuses de Arton (pág. 52)
+            - cell "Consumível" [ref=f8e272]
+            - cell "0 Esp." [ref=f8e274]
+            - cell "3000 TP" [ref=f8e275]
+            - cell [ref=f8e276]:
+              - generic [ref=f8e277]:
+                - button "" [disabled] [ref=f8e278] [cursor=pointer]
+                - button "" [ref=f8e280] [cursor=pointer]
+                - button "" [ref=f8e282] [cursor=pointer]
+          - row [ref=f8e284]:
+            - cell [ref=f8e285]
+            - cell "Ácido concentrado T20 — Heróis de Arton (pág. 234)" [ref=f8e287]:
+              - text: Ácido concentrado
+              - generic [ref=f8e288]: T20 — Heróis de Arton (pág. 234)
+            - cell "Consumível" [ref=f8e289]
+            - cell "0.5 Esp." [ref=f8e291]
+            - cell "60 TP" [ref=f8e292]
+            - cell [ref=f8e293]:
+              - generic [ref=f8e294]:
+                - button "" [ref=f8e295] [cursor=pointer]
+                - button "" [ref=f8e297] [cursor=pointer]
+                - button "" [ref=f8e299] [cursor=pointer]
+          - row [ref=f8e301]:
+            - cell [ref=f8e302]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e304]:
+              - text: Ábaco
+              - generic [ref=f8e305]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e306]
+            - cell "1 Esp." [ref=f8e308]
+            - cell "45 TP" [ref=f8e309]
+            - cell [ref=f8e310]:
+              - generic [ref=f8e311]:
+                - button "" [ref=f8e312] [cursor=pointer]
+                - button "" [ref=f8e314] [cursor=pointer]
+                - button "" [ref=f8e316] [cursor=pointer]
+          - row [ref=f8e318]:
+            - cell [ref=f8e319]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e321]:
+              - text: Ábaco
+              - generic [ref=f8e322]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e323]
+            - cell "1 Esp." [ref=f8e325]
+            - cell "45 TP" [ref=f8e326]
+            - cell [ref=f8e327]:
+              - generic [ref=f8e328]:
+                - button "" [ref=f8e329] [cursor=pointer]
+                - button "" [ref=f8e331] [cursor=pointer]
+                - button "" [ref=f8e333] [cursor=pointer]
+          - row [ref=f8e335]:
+            - cell [ref=f8e336]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e338]:
+              - text: Ábaco
+              - generic [ref=f8e339]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e340]
+            - cell "1 Esp." [ref=f8e342]
+            - cell "45 TP" [ref=f8e343]
+            - cell [ref=f8e344]:
+              - generic [ref=f8e345]:
+                - button "" [ref=f8e346] [cursor=pointer]
+                - button "" [ref=f8e348] [cursor=pointer]
+                - button "" [ref=f8e350] [cursor=pointer]
+          - row [ref=f8e352]:
+            - cell [ref=f8e353]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e355]:
+              - text: Ábaco
+              - generic [ref=f8e356]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e357]
+            - cell "1 Esp." [ref=f8e359]
+            - cell "45 TP" [ref=f8e360]
+            - cell [ref=f8e361]:
+              - generic [ref=f8e362]:
+                - button "" [ref=f8e363] [cursor=pointer]
+                - button "" [ref=f8e365] [cursor=pointer]
+                - button "" [ref=f8e367] [cursor=pointer]
+          - row [ref=f8e369]:
+            - cell [ref=f8e370]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e372]:
+              - text: Ábaco
+              - generic [ref=f8e373]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e374]
+            - cell "1 Esp." [ref=f8e376]
+            - cell "45 TP" [ref=f8e377]
+            - cell [ref=f8e378]:
+              - generic [ref=f8e379]:
+                - button "" [ref=f8e380] [cursor=pointer]
+                - button "" [ref=f8e382] [cursor=pointer]
+                - button "" [ref=f8e384] [cursor=pointer]
+          - row [ref=f8e386]:
+            - cell [ref=f8e387]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e389]:
+              - text: Ábaco
+              - generic [ref=f8e390]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e391]
+            - cell "1 Esp." [ref=f8e393]
+            - cell "45 TP" [ref=f8e394]
+            - cell [ref=f8e395]:
+              - generic [ref=f8e396]:
+                - button "" [ref=f8e397] [cursor=pointer]
+                - button "" [ref=f8e399] [cursor=pointer]
+                - button "" [ref=f8e401] [cursor=pointer]
+          - row [ref=f8e403]:
+            - cell [ref=f8e404]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e406]:
+              - text: Ábaco
+              - generic [ref=f8e407]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e408]
+            - cell "1 Esp." [ref=f8e410]
+            - cell "45 TP" [ref=f8e411]
+            - cell [ref=f8e412]:
+              - generic [ref=f8e413]:
+                - button "" [ref=f8e414] [cursor=pointer]
+                - button "" [ref=f8e416] [cursor=pointer]
+                - button "" [ref=f8e418] [cursor=pointer]
+          - row [ref=f8e420]:
+            - cell [ref=f8e421]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e423]:
+              - text: Ábaco
+              - generic [ref=f8e424]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e425]
+            - cell "1 Esp." [ref=f8e427]
+            - cell "45 TP" [ref=f8e428]
+            - cell [ref=f8e429]:
+              - generic [ref=f8e430]:
+                - button "" [ref=f8e431] [cursor=pointer]
+                - button "" [ref=f8e433] [cursor=pointer]
+                - button "" [ref=f8e435] [cursor=pointer]
+          - row [ref=f8e437]:
+            - cell [ref=f8e438]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e440]:
+              - text: Ábaco
+              - generic [ref=f8e441]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e442]
+            - cell "1 Esp." [ref=f8e444]
+            - cell "45 TP" [ref=f8e445]
+            - cell [ref=f8e446]:
+              - generic [ref=f8e447]:
+                - button "" [ref=f8e448] [cursor=pointer]
+                - button "" [ref=f8e450] [cursor=pointer]
+                - button "" [ref=f8e452] [cursor=pointer]
+          - row [ref=f8e454]:
+            - cell [ref=f8e455]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e457]:
+              - text: Ábaco
+              - generic [ref=f8e458]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e459]
+            - cell "1 Esp." [ref=f8e461]
+            - cell "45 TP" [ref=f8e462]
+            - cell [ref=f8e463]:
+              - generic [ref=f8e464]:
+                - button "" [ref=f8e465] [cursor=pointer]
+                - button "" [ref=f8e467] [cursor=pointer]
+                - button "" [ref=f8e469] [cursor=pointer]
+          - row [ref=f8e471]:
+            - cell [ref=f8e472]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e474]:
+              - text: Ábaco
+              - generic [ref=f8e475]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e476]
+            - cell "1 Esp." [ref=f8e478]
+            - cell "45 TP" [ref=f8e479]
+            - cell [ref=f8e480]:
+              - generic [ref=f8e481]:
+                - button "" [ref=f8e482] [cursor=pointer]
+                - button "" [ref=f8e484] [cursor=pointer]
+                - button "" [ref=f8e486] [cursor=pointer]
+          - row [ref=f8e488]:
+            - cell [ref=f8e489]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e491]:
+              - text: Ábaco
+              - generic [ref=f8e492]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e493]
+            - cell "1 Esp." [ref=f8e495]
+            - cell "45 TP" [ref=f8e496]
+            - cell [ref=f8e497]:
+              - generic [ref=f8e498]:
+                - button "" [ref=f8e499] [cursor=pointer]
+                - button "" [ref=f8e501] [cursor=pointer]
+                - button "" [ref=f8e503] [cursor=pointer]
+          - row [ref=f8e505]:
+            - cell [ref=f8e506]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e508]:
+              - text: Ábaco
+              - generic [ref=f8e509]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e510]
+            - cell "1 Esp." [ref=f8e512]
+            - cell "45 TP" [ref=f8e513]
+            - cell [ref=f8e514]:
+              - generic [ref=f8e515]:
+                - button "" [ref=f8e516] [cursor=pointer]
+                - button "" [ref=f8e518] [cursor=pointer]
+                - button "" [ref=f8e520] [cursor=pointer]
+          - row [ref=f8e522]:
+            - cell [ref=f8e523]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e525]:
+              - text: Ábaco
+              - generic [ref=f8e526]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e527]
+            - cell "1 Esp." [ref=f8e529]
+            - cell "45 TP" [ref=f8e530]
+            - cell [ref=f8e531]:
+              - generic [ref=f8e532]:
+                - button "" [ref=f8e533] [cursor=pointer]
+                - button "" [ref=f8e535] [cursor=pointer]
+                - button "" [ref=f8e537] [cursor=pointer]
+          - row [ref=f8e539]:
+            - cell [ref=f8e540]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e542]:
+              - text: Ábaco
+              - generic [ref=f8e543]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e544]
+            - cell "1 Esp." [ref=f8e546]
+            - cell "45 TP" [ref=f8e547]
+            - cell [ref=f8e548]:
+              - generic [ref=f8e549]:
+                - button "" [ref=f8e550] [cursor=pointer]
+                - button "" [ref=f8e552] [cursor=pointer]
+                - button "" [ref=f8e554] [cursor=pointer]
+          - row [ref=f8e556]:
+            - cell [ref=f8e557]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e559]:
+              - text: Ábaco
+              - generic [ref=f8e560]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e561]
+            - cell "1 Esp." [ref=f8e563]
+            - cell "45 TP" [ref=f8e564]
+            - cell [ref=f8e565]:
+              - generic [ref=f8e566]:
+                - button "" [ref=f8e567] [cursor=pointer]
+                - button "" [ref=f8e569] [cursor=pointer]
+                - button "" [ref=f8e571] [cursor=pointer]
+          - row [ref=f8e573]:
+            - cell [ref=f8e574]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e576]:
+              - text: Ábaco
+              - generic [ref=f8e577]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e578]
+            - cell "1 Esp." [ref=f8e580]
+            - cell "45 TP" [ref=f8e581]
+            - cell [ref=f8e582]:
+              - generic [ref=f8e583]:
+                - button "" [ref=f8e584] [cursor=pointer]
+                - button "" [ref=f8e586] [cursor=pointer]
+                - button "" [ref=f8e588] [cursor=pointer]
+          - row [ref=f8e590]:
+            - cell [ref=f8e591]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e593]:
+              - text: Ábaco
+              - generic [ref=f8e594]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e595]
+            - cell "1 Esp." [ref=f8e597]
+            - cell "45 TP" [ref=f8e598]
+            - cell [ref=f8e599]:
+              - generic [ref=f8e600]:
+                - button "" [ref=f8e601] [cursor=pointer]
+                - button "" [ref=f8e603] [cursor=pointer]
+                - button "" [ref=f8e605] [cursor=pointer]
+          - row [ref=f8e607]:
+            - cell [ref=f8e608]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e610]:
+              - text: Ábaco
+              - generic [ref=f8e611]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e612]
+            - cell "1 Esp." [ref=f8e614]
+            - cell "45 TP" [ref=f8e615]
+            - cell [ref=f8e616]:
+              - generic [ref=f8e617]:
+                - button "" [ref=f8e618] [cursor=pointer]
+                - button "" [ref=f8e620] [cursor=pointer]
+                - button "" [ref=f8e622] [cursor=pointer]
+          - row [ref=f8e624]:
+            - cell [ref=f8e625]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e627]:
+              - text: Ábaco
+              - generic [ref=f8e628]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e629]
+            - cell "1 Esp." [ref=f8e631]
+            - cell "45 TP" [ref=f8e632]
+            - cell [ref=f8e633]:
+              - generic [ref=f8e634]:
+                - button "" [ref=f8e635] [cursor=pointer]
+                - button "" [ref=f8e637] [cursor=pointer]
+                - button "" [ref=f8e639] [cursor=pointer]
+          - row [ref=f8e641]:
+            - cell [ref=f8e642]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e644]:
+              - text: Ábaco
+              - generic [ref=f8e645]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e646]
+            - cell "1 Esp." [ref=f8e648]
+            - cell "45 TP" [ref=f8e649]
+            - cell [ref=f8e650]:
+              - generic [ref=f8e651]:
+                - button "" [ref=f8e652] [cursor=pointer]
+                - button "" [ref=f8e654] [cursor=pointer]
+                - button "" [ref=f8e656] [cursor=pointer]
+          - row [ref=f8e658]:
+            - cell [ref=f8e659]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e661]:
+              - text: Ábaco
+              - generic [ref=f8e662]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e663]
+            - cell "1 Esp." [ref=f8e665]
+            - cell "45 TP" [ref=f8e666]
+            - cell [ref=f8e667]:
+              - generic [ref=f8e668]:
+                - button "" [ref=f8e669] [cursor=pointer]
+                - button "" [ref=f8e671] [cursor=pointer]
+                - button "" [ref=f8e673] [cursor=pointer]
+          - row [ref=f8e675]:
+            - cell [ref=f8e676]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e678]:
+              - text: Ábaco
+              - generic [ref=f8e679]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e680]
+            - cell "1 Esp." [ref=f8e682]
+            - cell "45 TP" [ref=f8e683]
+            - cell [ref=f8e684]:
+              - generic [ref=f8e685]:
+                - button "" [ref=f8e686] [cursor=pointer]
+                - button "" [ref=f8e688] [cursor=pointer]
+                - button "" [ref=f8e690] [cursor=pointer]
+          - row [ref=f8e692]:
+            - cell [ref=f8e693]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e695]:
+              - text: Ábaco
+              - generic [ref=f8e696]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e697]
+            - cell "1 Esp." [ref=f8e699]
+            - cell "45 TP" [ref=f8e700]
+            - cell [ref=f8e701]:
+              - generic [ref=f8e702]:
+                - button "" [ref=f8e703] [cursor=pointer]
+                - button "" [ref=f8e705] [cursor=pointer]
+                - button "" [ref=f8e707] [cursor=pointer]
+          - row [ref=f8e709]:
+            - cell [ref=f8e710]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e712]:
+              - text: Ábaco
+              - generic [ref=f8e713]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e714]
+            - cell "1 Esp." [ref=f8e716]
+            - cell "45 TP" [ref=f8e717]
+            - cell [ref=f8e718]:
+              - generic [ref=f8e719]:
+                - button "" [ref=f8e720] [cursor=pointer]
+                - button "" [ref=f8e722] [cursor=pointer]
+                - button "" [ref=f8e724] [cursor=pointer]
+          - row [ref=f8e726]:
+            - cell [ref=f8e727]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e729]:
+              - text: Ábaco
+              - generic [ref=f8e730]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e731]
+            - cell "1 Esp." [ref=f8e733]
+            - cell "45 TP" [ref=f8e734]
+            - cell [ref=f8e735]:
+              - generic [ref=f8e736]:
+                - button "" [ref=f8e737] [cursor=pointer]
+                - button "" [ref=f8e739] [cursor=pointer]
+                - button "" [ref=f8e741] [cursor=pointer]
+          - row [ref=f8e743]:
+            - cell [ref=f8e744]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e746]:
+              - text: Ábaco
+              - generic [ref=f8e747]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e748]
+            - cell "1 Esp." [ref=f8e750]
+            - cell "45 TP" [ref=f8e751]
+            - cell [ref=f8e752]:
+              - generic [ref=f8e753]:
+                - button "" [ref=f8e754] [cursor=pointer]
+                - button "" [ref=f8e756] [cursor=pointer]
+                - button "" [ref=f8e758] [cursor=pointer]
+          - row [ref=f8e760]:
+            - cell [ref=f8e761]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e763]:
+              - text: Ábaco
+              - generic [ref=f8e764]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e765]
+            - cell "1 Esp." [ref=f8e767]
+            - cell "45 TP" [ref=f8e768]
+            - cell [ref=f8e769]:
+              - generic [ref=f8e770]:
+                - button "" [ref=f8e771] [cursor=pointer]
+                - button "" [ref=f8e773] [cursor=pointer]
+                - button "" [ref=f8e775] [cursor=pointer]
+          - row [ref=f8e777]:
+            - cell [ref=f8e778]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e780]:
+              - text: Ábaco
+              - generic [ref=f8e781]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e782]
+            - cell "1 Esp." [ref=f8e784]
+            - cell "45 TP" [ref=f8e785]
+            - cell [ref=f8e786]:
+              - generic [ref=f8e787]:
+                - button "" [ref=f8e788] [cursor=pointer]
+                - button "" [ref=f8e790] [cursor=pointer]
+                - button "" [ref=f8e792] [cursor=pointer]
+          - row [ref=f8e794]:
+            - cell [ref=f8e795]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e797]:
+              - text: Ábaco
+              - generic [ref=f8e798]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e799]
+            - cell "1 Esp." [ref=f8e801]
+            - cell "45 TP" [ref=f8e802]
+            - cell [ref=f8e803]:
+              - generic [ref=f8e804]:
+                - button "" [ref=f8e805] [cursor=pointer]
+                - button "" [ref=f8e807] [cursor=pointer]
+                - button "" [ref=f8e809] [cursor=pointer]
+          - row [ref=f8e811]:
+            - cell [ref=f8e812]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e814]:
+              - text: Ábaco
+              - generic [ref=f8e815]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e816]
+            - cell "1 Esp." [ref=f8e818]
+            - cell "45 TP" [ref=f8e819]
+            - cell [ref=f8e820]:
+              - generic [ref=f8e821]:
+                - button "" [ref=f8e822] [cursor=pointer]
+                - button "" [ref=f8e824] [cursor=pointer]
+                - button "" [ref=f8e826] [cursor=pointer]
+          - row [ref=f8e828]:
+            - cell [ref=f8e829]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e831]:
+              - text: Ábaco
+              - generic [ref=f8e832]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e833]
+            - cell "1 Esp." [ref=f8e835]
+            - cell "45 TP" [ref=f8e836]
+            - cell [ref=f8e837]:
+              - generic [ref=f8e838]:
+                - button "" [ref=f8e839] [cursor=pointer]
+                - button "" [ref=f8e841] [cursor=pointer]
+                - button "" [ref=f8e843] [cursor=pointer]
+          - row [ref=f8e845]:
+            - cell [ref=f8e846]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e848]:
+              - text: Ábaco
+              - generic [ref=f8e849]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e850]
+            - cell "1 Esp." [ref=f8e852]
+            - cell "45 TP" [ref=f8e853]
+            - cell [ref=f8e854]:
+              - generic [ref=f8e855]:
+                - button "" [ref=f8e856] [cursor=pointer]
+                - button "" [ref=f8e858] [cursor=pointer]
+                - button "" [ref=f8e860] [cursor=pointer]
+          - row [ref=f8e862]:
+            - cell [ref=f8e863]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e865]:
+              - text: Ábaco
+              - generic [ref=f8e866]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e867]
+            - cell "1 Esp." [ref=f8e869]
+            - cell "45 TP" [ref=f8e870]
+            - cell [ref=f8e871]:
+              - generic [ref=f8e872]:
+                - button "" [ref=f8e873] [cursor=pointer]
+                - button "" [ref=f8e875] [cursor=pointer]
+                - button "" [ref=f8e877] [cursor=pointer]
+          - row [ref=f8e879]:
+            - cell [ref=f8e880]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e882]:
+              - text: Ábaco
+              - generic [ref=f8e883]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e884]
+            - cell "1 Esp." [ref=f8e886]
+            - cell "45 TP" [ref=f8e887]
+            - cell [ref=f8e888]:
+              - generic [ref=f8e889]:
+                - button "" [ref=f8e890] [cursor=pointer]
+                - button "" [ref=f8e892] [cursor=pointer]
+                - button "" [ref=f8e894] [cursor=pointer]
+          - row [ref=f8e896]:
+            - cell [ref=f8e897]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e899]:
+              - text: Ábaco
+              - generic [ref=f8e900]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e901]
+            - cell "1 Esp." [ref=f8e903]
+            - cell "45 TP" [ref=f8e904]
+            - cell [ref=f8e905]:
+              - generic [ref=f8e906]:
+                - button "" [ref=f8e907] [cursor=pointer]
+                - button "" [ref=f8e909] [cursor=pointer]
+                - button "" [ref=f8e911] [cursor=pointer]
+          - row [ref=f8e913]:
+            - cell [ref=f8e914]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e916]:
+              - text: Ábaco
+              - generic [ref=f8e917]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e918]
+            - cell "1 Esp." [ref=f8e920]
+            - cell "45 TP" [ref=f8e921]
+            - cell [ref=f8e922]:
+              - generic [ref=f8e923]:
+                - button "" [ref=f8e924] [cursor=pointer]
+                - button "" [ref=f8e926] [cursor=pointer]
+                - button "" [ref=f8e928] [cursor=pointer]
+          - row [ref=f8e930]:
+            - cell [ref=f8e931]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e933]:
+              - text: Ábaco
+              - generic [ref=f8e934]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e935]
+            - cell "1 Esp." [ref=f8e937]
+            - cell "45 TP" [ref=f8e938]
+            - cell [ref=f8e939]:
+              - generic [ref=f8e940]:
+                - button "" [ref=f8e941] [cursor=pointer]
+                - button "" [ref=f8e943] [cursor=pointer]
+                - button "" [ref=f8e945] [cursor=pointer]
+          - row [ref=f8e947]:
+            - cell [ref=f8e948]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e950]:
+              - text: Ábaco
+              - generic [ref=f8e951]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e952]
+            - cell "1 Esp." [ref=f8e954]
+            - cell "45 TP" [ref=f8e955]
+            - cell [ref=f8e956]:
+              - generic [ref=f8e957]:
+                - button "" [ref=f8e958] [cursor=pointer]
+                - button "" [ref=f8e960] [cursor=pointer]
+                - button "" [ref=f8e962] [cursor=pointer]
+          - row [ref=f8e964]:
+            - cell [ref=f8e965]
+            - cell "Ábaco T20 — Heróis de Arton (pág. 227)" [ref=f8e967]:
+              - text: Ábaco
+              - generic [ref=f8e968]: T20 — Heróis de Arton (pág. 227)
+            - cell "tesouro" [ref=f8e969]
+            - cell "1 Esp." [ref=f8e971]
+            - cell "45 TP" [ref=f8e972]
+            - cell [ref=f8e973]:
+              - generic [ref=f8e974]:
+                - button "" [ref=f8e975] [cursor=pointer]
+                - button "" [ref=f8e977] [cursor=pointer]
+                - button "" [ref=f8e979] [cursor=pointer]

@@ -1,0 +1,764 @@
+/* ════════════════════════════════════════════════════════════════
+   t20-hayd-loja — TEMA "TENDA MEDIEVAL"
+   Classe .tema-tenda (ver temaLoja() em scripts/main.js, configuração
+   "Tema visual da loja").
+
+   A janela vira uma barraca de feira: armação de madeira (cabeçalho,
+   balcão e lateral) segurando o toldo listrado, e a vitrine é a página
+   de pergaminho pregada no balcão.
+
+   Três regras que o tema NÃO quebra:
+   1. fonte — nenhuma família é trocada, nada de small-caps;
+   2. legibilidade — creme sobre madeira e tinta sobre pergaminho, as
+      duas combinações bem acima de 7:1;
+   3. organização — a estrutura do shop.hbs/shop.css fica intacta; só o
+      espaço do toldo e da corda é acrescentado em padding.
+
+   Texturas em assets/tenda/*.svg, geradas proceduralmente (ruído
+   fractal para o veio da madeira e a fibra do pergaminho), então não
+   há imagem binária para versionar nem recorte para refazer.
+   ════════════════════════════════════════════════════════════════ */
+
+.t20-loja-window.tema-tenda,
+.t20-loja-settings.tema-tenda {
+  --t-parede: url("../assets/tenda/parede.svg");
+  --t-tabua: url("../assets/tenda/tabua.svg");
+  --t-pergaminho: url("../assets/tenda/pergaminho.svg");
+  --t-toldo: url("../assets/tenda/toldo.svg");
+  --t-corda: url("../assets/tenda/corda.svg");
+  --t-prego: url("../assets/tenda/prego.svg");
+  --t-gonfalao-topo: url("../assets/tenda/gonfalon-topo.svg");
+  --t-gonfalao-meio: url("../assets/tenda/gonfalon-meio.svg");
+  --t-gonfalao-ponta: url("../assets/tenda/gonfalon-ponta.svg");
+  /* Dessatura o estandarte para ele não gritar ao lado do resto. Tem de
+     ser o MESMO valor nas duas camadas (corpo e ponta): valores
+     diferentes reaparecem como emenda de tom na junção. */
+  --t-gonfalao-filtro: saturate(0.72) brightness(0.94);
+
+  --t-creme: #f4e9d0;
+  --t-creme-fraco: #cdbb97;
+  --t-tinta: #33261a;
+  --t-tinta-fraca: #5b472b;
+  --t-latao: #c6a04a;
+  --t-latao-escuro: #8a6a22;
+  --t-carmim: #9d2026;
+  --t-escuro: #2a1a0c;
+
+  background: var(--t-parede) 0 0 / 256px 384px repeat;
+  border: 2px solid var(--t-escuro);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: var(--t-creme);
+}
+
+/* ── Cabeçalho: viga de madeira ──────────────────────────────
+   Sem placa nem letra espaçada: é o cabeçalho do Foundry, só que
+   em madeira, para não brigar com o toldo logo abaixo. */
+.t20-loja-window.tema-tenda > .window-header,
+.t20-loja-settings.tema-tenda > .window-header {
+  background: var(--t-tabua) 0 0 / 320px 200px repeat;
+  border-bottom: 2px solid var(--t-escuro);
+  color: var(--t-creme);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.t20-loja-window.tema-tenda > .window-header a,
+.t20-loja-settings.tema-tenda > .window-header a { color: var(--t-creme); }
+.t20-loja-window.tema-tenda > .window-header a:hover,
+.t20-loja-settings.tema-tenda > .window-header a:hover { color: var(--t-latao); }
+
+.t20-loja-window.tema-tenda .window-content,
+.t20-loja-settings.tema-tenda .window-content {
+  background: transparent;
+  color: var(--t-creme);
+}
+
+/* ════ A PAREDE ═══════════════════════════════════════════════
+   O corpo da janela é a parede de tábuas, e TUDO por cima dela é peça
+   solta — balcão, painel de filtros, vitrine —, com a parede aparecendo
+   nas frestas. Nada mais sangra de borda a borda, exceto o toldo, que é
+   a viga do telhado. */
+.tema-tenda .t20-loja-app {
+  position: relative;
+  box-sizing: border-box;
+  padding: 52px 10px 10px;
+  background: var(--t-parede) 0 0 / 256px 384px repeat;
+}
+.tema-tenda .t20-loja-app::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  z-index: 2;
+  background: var(--t-toldo) 0 0 / 50px 44px repeat-x;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+
+/* ════ O BALCÃO ═══════════════════════════════════════════════
+   Uma tábua pregada na parede: saldo em cima, filtros embaixo, as duas
+   metades fechando a mesma moldura, com um prego em cada canto — os dois
+   de cima na metade do saldo, os dois de baixo na dos filtros. O recuo
+   lateral de 26px existe para o conteúdo não encostar nos pregos. */
+.tema-tenda .shop-wealth-bar,
+.tema-tenda .shop-filters {
+  position: relative;
+  border-left: 1px solid var(--t-escuro);
+  border-right: 1px solid var(--t-escuro);
+  color: var(--t-creme);
+  background-image: var(--t-prego), var(--t-prego), var(--t-tabua);
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: 15px 15px, 15px 15px, 320px 200px;
+}
+.tema-tenda .shop-wealth-bar {
+  padding: 7px 26px 5px;
+  border-top: 1px solid var(--t-escuro);
+  border-radius: 4px 4px 0 0;
+  box-shadow: inset 0 2px 0 -1px rgba(255, 255, 255, 0.14);
+  background-position: left 6px top 5px, right 6px top 5px, 0 0;
+}
+.tema-tenda .shop-filters {
+  gap: 4px;
+  padding: 3px 26px 7px;
+  border-bottom: 1px solid var(--t-escuro);
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 8px;
+  box-shadow: inset 0 -5px 7px -5px rgba(0, 0, 0, 0.55), 0 5px 9px rgba(0, 0, 0, 0.5);
+  background-position: left 6px bottom 5px, right 6px bottom 5px, 0 0;
+}
+
+/* Saldo: fichas de latão sobre couro */
+.tema-tenda .shop-wealth-bar i { color: var(--t-latao); }
+.tema-tenda .wealth-label { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.tema-tenda .wealth-coin {
+  border: 1px solid var(--t-latao-escuro);
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.tema-tenda .wealth-coin.gold   { color: #e8c45f; }
+.tema-tenda .wealth-coin.silver { color: #cfd6e2; }
+.tema-tenda .wealth-coin.copper { color: #e09a62; }
+.tema-tenda .wealth-total { color: var(--t-creme-fraco); opacity: 1; }
+
+/* ── Controles do balcão ─────────────────────────────────────
+   Botões = couro com aro de latão; campos = pergaminho embutido
+   na madeira. Forma e tamanho continuam os do Foundry. */
+.t20-loja-window.tema-tenda button,
+.t20-loja-settings.tema-tenda button {
+  border: 1px solid var(--t-latao-escuro);
+  background: linear-gradient(180deg, #4a2f17, #35200e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: var(--t-creme);
+}
+.t20-loja-window.tema-tenda button:hover:not(:disabled),
+.t20-loja-settings.tema-tenda button:hover:not(:disabled) {
+  border-color: var(--t-latao);
+  background: linear-gradient(180deg, #5c3b1d, #432913);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 6px rgba(198, 160, 74, 0.45);
+  color: #fff6e0;
+}
+.t20-loja-window.tema-tenda button:disabled { opacity: 0.4; }
+.tema-tenda .shop-mode-toggle .mode-btn.active {
+  background: linear-gradient(180deg, #b32a2f, #7d1a1f);
+  border-color: var(--t-latao);
+  color: #fdf2da;
+}
+
+.t20-loja-window.tema-tenda input[type="text"],
+.t20-loja-window.tema-tenda input[type="number"],
+.t20-loja-window.tema-tenda input[type="search"],
+.t20-loja-window.tema-tenda select,
+.t20-loja-settings.tema-tenda input[type="text"],
+.t20-loja-settings.tema-tenda select {
+  border: 1px solid var(--t-escuro);
+  background: var(--t-pergaminho) 0 0 / 400px 400px repeat;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  color: var(--t-tinta);
+}
+.t20-loja-window.tema-tenda input::placeholder { color: var(--t-tinta-fraca); }
+.t20-loja-window.tema-tenda input:focus,
+.t20-loja-window.tema-tenda select:focus,
+.t20-loja-settings.tema-tenda input:focus {
+  border-color: var(--t-latao);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 6px rgba(198, 160, 74, 0.6);
+  outline: none;
+}
+.t20-loja-window.tema-tenda select option { background: #ece0c0; color: var(--t-tinta); }
+.tema-tenda input[type="checkbox"],
+.tema-tenda input[type="radio"] { accent-color: var(--t-carmim); }
+.t20-loja-window.tema-tenda input[type="range"] { accent-color: var(--t-latao); }
+
+/* ════ O GONFALÃO (lateral) ══════════════════════════════════
+   A lateral deixa de ser painel e vira um estandarte pendurado na
+   parede, com a ponta rabo-de-andorinha saindo para FORA da janela.
+
+   Montagem em duas camadas, porque o asset tem altura fixa (225×500) e
+   a lateral estica com a janela:
+     · ::before = o CORPO, refeito em CSS com as mesmas cores do
+       gonfalon.svg (pano, contorno #1a0f07, barra #d9a520 a 12px e
+       tracejado a 20px), e por isso estica à vontade;
+     · ::after  = a PONTA, recortada do próprio asset — a faixa y 400–490
+       do desenho —, ancorada no pé da lateral e transbordando.
+   As duas se encontram na base da área de conteúdo. Mudar a cor do
+   asset obriga a repetir a mudança no corpo, senão a emenda aparece.
+
+   Para a ponta escapar da janela, o tema solta o overflow da janela e
+   do .window-content (o padrão do módulo é hidden).
+
+   O min-height: 0 abaixo NÃO é enfeite. .window-content é item flex com
+   flex: 1, e o min-height: auto dele só resolve para 0 enquanto o
+   elemento é container de rolagem. Era o overflow: hidden que fazia esse
+   papel; trocando por visible, o item volta a poder crescer até caber
+   TODO o conteúdo — com 1026 itens a janela virava 2200px de altura e a
+   lista parava de rolar sozinha. */
+/* :has limita o escopo à janela que realmente tem o estandarte — o
+   carrinho e o aprimorar continuam com o recorte normal. Se o :has
+   falhar, a ponta volta a ser cortada na borda e nada mais quebra. */
+.t20-loja-window.tema-tenda:has(.shop-content),
+.t20-loja-window.tema-tenda:has(.shop-content) .window-content { overflow: visible; }
+.t20-loja-window.tema-tenda:has(.shop-content) .window-content { min-height: 0; }
+
+.tema-tenda .shop-content { position: relative; }
+
+/* Corpo do estandarte: a fatia do TOPO por cima (a borda de cima) e a
+   fatia do MEIO ladrilhada atrás dela, que é o que permite o estandarte
+   ter qualquer altura. Os ornamentos do desenho original (cruz e
+   losangos) foram retirados das fatias: numa lateral estreita e de
+   altura variável eles sempre acabam atrás de algum rótulo, e texto
+   creme sobre o dourado deles dá 2:1. Nada é redesenhado em CSS —
+   foi justamente a réplica que criava a emenda, porque o stroke do asset
+   é centrado na borda (1,5px para dentro) e um border CSS fica 3px para
+   dentro, deixando as barras douradas fora de registro. */
+.tema-tenda .shop-content::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 225px;
+  pointer-events: none;
+  filter: var(--t-gonfalao-filtro);
+  background:
+    var(--t-gonfalao-topo) left top / 225px 120px no-repeat,
+    var(--t-gonfalao-meio) left top / 225px 44px repeat-y;
+}
+
+/* Ponta rabo-de-andorinha, transbordando para fora da janela */
+.tema-tenda .shop-content::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 100%;
+  width: 225px;
+  height: 115px;
+  pointer-events: none;
+  /* A fatia da ponta já vem no tamanho certo (225×115), então não há
+     escala nenhuma aqui. Ela começa em y=385 do desenho para pegar o
+     início da angulação das bordas, que acontece antes do bico. */
+  background: var(--t-gonfalao-ponta) left top / 225px 115px no-repeat;
+  /* Mesmo filtro do corpo, e NADA além dele. Aqui havia um
+     drop-shadow(0 6px 7px) para dar relevo à ponta pendurada, e ele era
+     a emenda visível: o drop-shadow projeta o contorno INTEIRO da fatia,
+     inclusive a aresta reta de cima, que é justamente a linha da junção.
+     Como o ::after pinta depois do ::before, essa faixa escura caía por
+     cima do corpo opaco e marcava onde a janela termina. Relevo só pode
+     voltar aqui se vier de uma sombra sem aresta superior — sombra na
+     fatia inteira repete o problema. */
+  filter: var(--t-gonfalao-filtro);
+}
+
+/* A lateral em si fica transparente: quem desenha é o estandarte.
+
+   O recuo para dentro do pano é feito por MARGIN, não por padding. Num
+   container de rolagem o padding rola junto com o conteúdo: ao descer, o
+   texto alcança a borda da caixa e, como a caixa tinha o tamanho exato do
+   estandarte, passava por cima da borda dourada. Com margin, a caixa de
+   recorte em si fica menor que o pano, então o conteúdo é cortado sempre
+   dentro dele — e a barra de rolagem também cai do lado de dentro.
+
+   A conta horizontal: 22 (margem) + 181 (caixa) + 32 (margem) = 235, que
+   é a largura do estandarte (225) mais a fresta de 10px até a vitrine.
+   Mexer num número exige refazer a soma. Os limites úteis do desenho são
+   x 21 e x 204 (o tracejado do gonfalon.svg está em 20 e 205). */
+.tema-tenda .shop-side-filters {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 181px;
+  margin: 22px 32px 18px 22px;
+  padding: 0 6px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--t-creme);
+  scrollbar-width: thin;
+  scrollbar-color: #c9993a rgba(0, 0, 0, 0.35);
+}
+
+.tema-tenda .side-filter-header,
+.tema-tenda .side-filter-match {
+  color: var(--t-creme);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.tema-tenda .side-filter-header {
+  padding-bottom: 7px;
+  border-bottom: 2px solid #d9a520;
+}
+.tema-tenda .side-filter-header i { color: #f2dca0; }
+.tema-tenda .side-filter-match {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(217, 165, 32, 0.5);
+}
+
+/* Categorias: linhas no pano, separadas por tracejado dourado, cada uma
+   com o ícone da sua família. Sem placa de madeira — sobre o pano, placa
+   viraria remendo. */
+.tema-tenda .side-filter-group {
+  position: static;
+  margin: 0;
+  border: none;
+  border-bottom: 1px dashed rgba(217, 165, 32, 0.4);
+  border-radius: 0;
+  box-shadow: none;
+}
+.tema-tenda .side-filter-group summary {
+  position: relative;
+  padding: 9px 2px 9px 32px;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--t-creme);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: left 2px center;
+  background-size: 22px 22px;
+}
+.tema-tenda .side-filter-group summary:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+.tema-tenda .side-filter-group summary::before { color: #f2dca0; opacity: 1; }
+.tema-tenda .side-filter-group summary > span { flex: 1 1 auto; text-align: left; }
+
+.tema-tenda .side-filter-group[data-group="weapons"]     > summary { background-image: url("../assets/icons/armas.svg"); }
+.tema-tenda .side-filter-group[data-group="equipment"]   > summary { background-image: url("../assets/icons/equipamento.svg"); }
+.tema-tenda .side-filter-group[data-group="treasure"]    > summary { background-image: url("../assets/icons/tesouro.svg"); }
+.tema-tenda .side-filter-group[data-group="consumables"] > summary { background-image: url("../assets/icons/consumiveis.svg"); }
+.tema-tenda .side-filter-group[data-group="spells"]      > summary { background-image: url("../assets/icons/magias.svg"); }
+
+/* Aberta: o pano afunda e uma barra dourada marca o bloco */
+.tema-tenda .side-filter-group .filter-options {
+  margin: 0 0 8px;
+  padding: 7px 8px 9px 12px;
+  border: none;
+  border-left: 2px solid #d9a520;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 3px 6px -3px rgba(0, 0, 0, 0.6);
+  color: var(--t-creme);
+}
+.tema-tenda .filter-options .filter-subtitle { color: #f2dca0; opacity: 1; }
+.tema-tenda .filter-options .filter-hint { color: #e6d6b4; }
+
+/* ════ A VITRINE ══════════════════════════════════════════════
+   Página de pergaminho pregada na madeira: fibra, bordas gastas e
+   sombra interna de papel velho. */
+.tema-tenda .shop-content { background: transparent; }
+.tema-tenda .shop-items-list {
+  background: var(--t-pergaminho) 0 0 / 400px 400px repeat;
+  border: 1px solid var(--t-escuro);
+  border-radius: 4px;
+  box-shadow:
+    0 5px 9px rgba(0, 0, 0, 0.5),
+    inset 0 0 26px rgba(120, 82, 36, 0.3),
+    inset 0 0 70px rgba(120, 82, 36, 0.12);
+  color: var(--t-tinta);
+  scrollbar-color: var(--t-latao-escuro) rgba(90, 58, 30, 0.18);
+}
+/* Sem text-shadow: o halo branco embaçava um texto que já é pequeno
+   (0.85em) e negrito. A faixa fica mais clara que as linhas para o
+   cabeçalho destacar sem escurecer o fundo sob o texto. */
+.tema-tenda .shop-table thead th {
+  background: #f3e8cd;
+  border-bottom: 2px solid var(--t-latao-escuro);
+  color: #241a10;
+  text-shadow: none;
+}
+.tema-tenda .shop-table td { border-bottom-color: rgba(90, 58, 30, 0.22); }
+.tema-tenda .shop-item-row:nth-child(even) { background: rgba(120, 82, 36, 0.055); }
+.tema-tenda .shop-item-row:hover { background: rgba(157, 32, 38, 0.12); }
+.tema-tenda .shop-item-row.cannot-afford { opacity: 0.45; }
+
+/* Itens expostos: moldura de madeira, como peça na prateleira */
+.tema-tenda .shop-item-img {
+  border: 2px solid #3d2612;
+  border-radius: 2px;
+  background: rgba(255, 252, 242, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+.tema-tenda .shop-item-name { color: var(--t-tinta); }
+.tema-tenda .shop-item-name:hover { text-shadow: 0 0 7px rgba(157, 32, 38, 0.55); }
+.tema-tenda .item-source { color: var(--t-tinta-fraca); }
+/* Etiqueta "Tipo": a bandeirinha de assets/icons/bandeira-*.svg, uma cor
+   por família de item (a família vem de typeKey, em scripts/shop-app.js).
+
+   É border-image, e não background: a bandeira tem um entalhe de 10px na
+   ponta direita, e esticar a imagem inteira para a largura do rótulo
+   deformaria esse entalhe — "Arma" e "Consumível" ficariam com bicos de
+   tamanhos diferentes. O corte `0 12 0 4` mantém as duas pontas no
+   tamanho original e estica só o miolo.
+
+   O ::before é um véu escuro sobre o pano, atrás do texto. Existe porque
+   o gradiente das bandeiras é mais claro justamente no meio, que é onde
+   o texto fica: sem ele o creme cai para 2,5–4,6:1 conforme a cor. Ele
+   some no topo e na base, para a bandeira manter os contornos escuros
+   dela, e é recortado no formato da bandeira (o entalhe fica nas fatias
+   das bordas, fora da caixa de padding; sem o recorte, a ponta ficava
+   clara e aparecia um degrau). Os 10px do polígono são a profundidade
+   do entalhe no desenho — ela é fixa porque a fatia da direita não
+   estica.
+
+   Cada cor tem o SEU --veu, medido: é o mínimo que põe o texto creme em
+   ~5,5:1 sobre a faixa onde ele cai, e não um valor único chutado. Isso
+   importa porque o véu come a cor da bandeira — um valor só, alto o
+   bastante para o amarelo, deixaria o roxo e o azul quase pretos.
+
+   Para remedir: componha a bandeira num canvas no tamanho da etiqueta,
+   aplique o mesmo gradiente e amostre a faixa de 35% a 65% da altura.
+   Atenção, o alpha compõe em sRGB e não em luminância linear — estimar
+   na mão multiplicando a luminância por (1-α) dá um resultado MUITO pior
+   que o real (deu 5,5 onde a medição deu 8,4) e leva a escurecer a
+   bandeira à toa. */
+.tema-tenda .type-badge {
+  --bandeira: url("../assets/icons/bandeira-cinza.svg");
+  --veu: 0.18;
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  padding: 2px 7px 2px 6px;
+  border: 0 solid transparent;
+  border-left-width: 4px;
+  border-right-width: 12px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border-image-source: var(--bandeira);
+  border-image-slice: 0 12 0 4 fill;
+  border-image-repeat: stretch;
+  color: #f7eedb;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.tema-tenda .type-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0 -12px 0 -4px;
+  z-index: -1;
+  pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%);
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, var(--veu)) 20%,
+    rgba(0, 0, 0, var(--veu)) 80%,
+    rgba(0, 0, 0, 0) 100%);
+}
+.tema-tenda .type-badge[data-tipo="arma"]     { --bandeira: url("../assets/icons/bandeira-azul.svg"); --veu: 0.16; }
+.tema-tenda .type-badge[data-tipo="protecao"] { --bandeira: url("../assets/icons/bandeira-cinza.svg"); --veu: 0.18; }
+.tema-tenda .type-badge[data-tipo="equipamento"] { --bandeira: url("../assets/icons/bandeira-cinza.svg"); --veu: 0.18; }
+.tema-tenda .type-badge[data-tipo="consumivel"] { --bandeira: url("../assets/icons/bandeira-verde.svg"); --veu: 0.28; }
+.tema-tenda .type-badge[data-tipo="tesouro"]  { --bandeira: url("../assets/icons/bandeira-amarelo.svg"); --veu: 0.32; }
+.tema-tenda .type-badge[data-tipo="magia"]    { --bandeira: url("../assets/icons/bandeira-roxo.svg"); --veu: 0.12; }
+.tema-tenda .type-badge[data-tipo="poder"]    { --bandeira: url("../assets/icons/bandeira-roxo.svg"); --veu: 0.12; }
+
+.tema-tenda .col-weight { color: var(--t-tinta-fraca); }
+.tema-tenda .price-tag { color: #6b4304; }
+.tema-tenda .price-tag.too-expensive { color: #99191e; }
+.tema-tenda .shop-loading,
+.tema-tenda .shop-empty { color: var(--t-tinta-fraca); }
+.tema-tenda .shop-empty .hint { color: var(--t-tinta-fraca); }
+
+/* Botões dentro da vitrine: latão sobre pergaminho, não couro —
+   sobre papel claro o couro escuro vira um borrão. */
+.t20-loja-window.tema-tenda .shop-items-list button,
+.t20-loja-window.tema-tenda .cart-items-list button {
+  border: 1px solid var(--t-latao-escuro);
+  background: linear-gradient(180deg, #e8d9b2, #d2bd8c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  color: #4a3718;
+}
+.t20-loja-window.tema-tenda .shop-items-list button:hover:not(:disabled),
+.t20-loja-window.tema-tenda .cart-items-list button:hover:not(:disabled) {
+  border-color: #6d5118;
+  background: linear-gradient(180deg, #f3e7c8, #ddc99c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 6px rgba(138, 106, 34, 0.5);
+  color: #2f2310;
+}
+
+/* ── Carrinho ────────────────────────────────────────────────── */
+.tema-tenda .cart-header,
+.tema-tenda .cart-footer {
+  background: var(--t-tabua) 0 0 / 320px 200px repeat;
+  border-color: var(--t-escuro);
+  color: var(--t-creme);
+}
+.tema-tenda .cart-items-list {
+  background: var(--t-pergaminho) 0 0 / 400px 400px repeat;
+  box-shadow: inset 0 0 26px rgba(120, 82, 36, 0.3);
+  color: var(--t-tinta);
+}
+.tema-tenda .cart-table th {
+  background: #f3e8cd;
+  border-bottom: 2px solid var(--t-latao-escuro);
+  color: #241a10;
+}
+.tema-tenda .cart-table td { border-bottom-color: rgba(90, 58, 30, 0.22); }
+.tema-tenda .cart-item-variant { color: var(--t-tinta-fraca); }
+.tema-tenda .cart-total { color: var(--t-latao); }
+
+/* ── Diálogos e janela de aprimoramento ─────────────────────── */
+.tema-tenda .craft-preview,
+.tema-tenda .upgrade-preview,
+.tema-tenda .qty-preview {
+  border-color: var(--t-latao-escuro);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--t-creme);
+}
+.tema-tenda .apr-lista,
+.tema-tenda .apr-entradas {
+  border: 1px solid var(--t-escuro);
+  background: rgba(0, 0, 0, 0.2);
+}
+.tema-tenda .apr-item { color: var(--t-creme); }
+.tema-tenda .apr-item:hover { background: rgba(157, 32, 38, 0.22); }
+.tema-tenda .apr-item img { border: 2px solid #3d2612; }
+.tema-tenda .apr-badge,
+.tema-tenda .apr-entrada-custo {
+  border-color: var(--t-latao-escuro);
+  background: rgba(0, 0, 0, 0.28);
+}
+.tema-tenda .apr-abas button.active {
+  border-color: var(--t-latao);
+  background: linear-gradient(180deg, #b32a2f, #7d1a1f);
+  color: #fdf2da;
+}
+.tema-tenda .apr-item-preco,
+.tema-tenda .apr-vazio,
+.tema-tenda .apr-dica,
+.tema-tenda .apr-cabecalho-info small { color: var(--t-creme-fraco); }
+
+/* ── Janela de configurações ─────────────────────────────────── */
+.t20-loja-settings.tema-tenda h3 {
+  border-bottom: 1px solid var(--t-latao-escuro);
+  color: var(--t-creme);
+}
+.tema-tenda .configured-row {
+  border-color: var(--t-latao-escuro);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--t-creme);
+}
+.tema-tenda .settings-footer { border-top-color: rgba(255, 255, 255, 0.15); }
+.tema-tenda .empty-list { color: var(--t-creme-fraco); }
+
+/* ════ A LAMPARINA ════════════════════════════════════════════
+   Pendurada a cavalo na borda direita, logo abaixo do botão de fechar:
+   transborda da janela de propósito, para o arco do balanço não ficar
+   espremido contra a moldura. Quem permite isso é o overflow: visible
+   que o tema já solta para a ponta do estandarte (ver acima) — se
+   aquele :has falhar, a lamparina volta a ser recortada na borda. Fica
+   ATRÁS do toldo (z-index 1 contra os 2 do ::before), então a corrente
+   nasce de trás da aba em vez de flutuar colada nela — é o detalhe que
+   faz parecer pendurada na armação, e não desenhada por cima.
+
+   Só o balanço: o pêndulo reativo ao arrasto da janela custaria um rAF
+   por janela aberta e um ciclo de vida para limpar, e o encanto está
+   todo no repouso. O corpo e a chama usam durações diferentes (5s e
+   1.6s) de propósito: em fase elas batem e viram piscada mecânica.
+
+   pointer-events: none em tudo — ela cobre o balcão e os filtros, e
+   nada aqui pode roubar clique. */
+.loja-lamp { display: none; }
+
+.tema-tenda .loja-lamp {
+  display: flex;
+  position: absolute;
+  top: 0;
+  right: -14px;
+  z-index: 1;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  pointer-events: none;
+  /* A amplitude é variável de propósito: scripts/lamparina.mjs engorda
+     --lamp-amp quando a janela se mexe e deixa murchar depois. Trocar o
+     valor de uma custom property usada dentro de um @keyframes
+     reavalia a animação em curso sem reiniciá-la — é o que permite
+     intensificar o balanço sem emenda. A DURAÇÃO não é mexida pelo
+     mesmo motivo: alterá-la no meio salta a fase. */
+  --lamp-amp: 2deg;
+  animation: loja-lamp-sway 5s ease-in-out infinite;
+}
+.tema-tenda .loja-lamp * { pointer-events: none; }
+
+/* O corpo pendura na PONTA da corrente, então tem eixo próprio no topo
+   e gira pelo seu próprio ângulo (ver lamparina.mjs). Sem este wrapper
+   a lamparina inteira seria uma barra rígida girando no gancho — era o
+   que a fazia parecer dura. */
+.tema-tenda .loja-lamp__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  /* O corpo balança com a MESMA curva da corrente, só que menor e
+     atrasado: o delay negativo de -4,6s equivale a 0,4s de atraso num
+     ciclo de 5s. É o que sobrou do pêndulo duplo — a lamparina vindo
+     atrás da corrente —, agora de graça, sem simular nada. */
+  --lamp-amp2: 1.2deg;
+  animation: loja-lamp-sway-corpo 5s ease-in-out -4.6s infinite;
+}
+@keyframes loja-lamp-sway-corpo {
+  0%, 100% { transform: rotate(calc(var(--lamp-amp2) * -1)); }
+  50%      { transform: rotate(var(--lamp-amp2)); }
+}
+
+.tema-tenda .loja-lamp__chain {
+  width: 3px;
+  height: 72px;
+  background: repeating-linear-gradient(#8a8a8a 0 4px, #3a3a3a 4px 6px);
+}
+.tema-tenda .loja-lamp__ring {
+  width: 16px;
+  height: 10px;
+  border: 3px solid var(--t-escuro);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+.tema-tenda .loja-lamp__cap {
+  width: 44px;
+  height: 12px;
+  background: linear-gradient(#4a4a4a, #1c1c1c);
+  clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
+}
+.tema-tenda .loja-lamp__glass {
+  position: relative;
+  width: 38px;
+  height: 56px;
+  border: 3px solid var(--t-escuro);
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255, 200, 120, 0.25), rgba(255, 230, 170, 0.5), rgba(255, 200, 120, 0.25));
+}
+.tema-tenda .loja-lamp__bar {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 100%;
+  background: var(--t-escuro);
+}
+/* A vela. O gradiente horizontal é o que dá volume de cilindro; o topo
+   é mais claro porque a chama cai nele. O ::before é o pavio e o
+   ::after, a cera escorrida no pé — sem os dois ela lê como um tubo. */
+.tema-tenda .loja-lamp__candle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 9px;
+  height: 18px;
+  margin-left: -4.5px;
+  border-radius: 2px 2px 1px 1px;
+  background:
+    radial-gradient(ellipse 5px 3px at 50% 0, #fff6dc, rgba(255, 246, 220, 0) 70%),
+    linear-gradient(90deg, #b99a63 0%, #f2e2bd 35%, #fffaec 52%, #e2cda2 72%, #a98c58 100%);
+  box-shadow: inset 0 2px 2px -1px rgba(255, 255, 255, 0.65);
+}
+/* Pavio: sobe atrás da chama, só a raiz escura aparece. */
+.tema-tenda .loja-lamp__candle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 2px;
+  height: 4px;
+  margin-left: -1px;
+  border-radius: 1px 1px 0 0;
+  background: linear-gradient(#3a2a14, #6b4a1c);
+}
+/* Cera escorrida: uma gota de cada lado, alturas diferentes de
+   propósito — simétrico vira desenho técnico. */
+.tema-tenda .loja-lamp__candle::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: 0;
+  height: 7px;
+  border-radius: 3px 2px 2px 2px / 5px 3px 2px 2px;
+  background: linear-gradient(90deg, #c7a970, #f6ead0 45%, #d8c196);
+}
+
+.tema-tenda .loja-lamp__flame {
+  position: absolute;
+  left: 50%;
+  bottom: 21px;
+  width: 14px;
+  height: 22px;
+  margin-left: -7px;
+  transform-origin: 50% 100%;
+  border-radius: 50% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 50% 70%, #fff8d0, #ffc040 45%, #ff7a10 80%);
+  box-shadow: 0 0 18px 8px rgba(255, 170, 60, 0.55), 0 0 50px 20px rgba(255, 140, 40, 0.25);
+  animation: loja-lamp-flick 1.6s ease-in-out infinite;
+}
+.tema-tenda .loja-lamp__base {
+  width: 46px;
+  height: 8px;
+  border-radius: 2px;
+  background: linear-gradient(#3a3a3a, #111);
+}
+.tema-tenda .loja-lamp__tip {
+  width: 8px;
+  height: 10px;
+  border-radius: 0 0 4px 4px;
+  background: var(--t-escuro);
+}
+/* O halo é irmão posicionado, não box-shadow do vidro: assim ele não
+   entra no clip-path/overflow de ninguém e some sozinho nas bordas. Ele
+   é puxado para dentro (margin-left assimétrico) porque a lamparina
+   fica a cavalo na borda: centrado, metade do halo cairia no canvas. */
+.tema-tenda .loja-lamp__glow {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  width: 230px;
+  height: 230px;
+  margin-left: -165px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 170, 70, 0.26), transparent 62%);
+}
+
+/* Quando o pêndulo (scripts/lamparina.mjs) assume, o keyframes TEM de
+   sair: animação CSS vence style inline na cascata, e com as duas
+   disputando transform a lamparina trava. A classe é posta e removida
+   pelo próprio módulo, então o CSS continua sendo o estado padrão — se
+   o JS falhar ao carregar, ela volta a balançar sozinha. */
+/* Com o lampião desligado nas configurações a janela ganha esta classe
+   e some com ele. Fica no .loja-lamp e não no .t20-loja-app para a
+   regra continuar valendo se algum dia houver lampião em outro tema. */
+.t20-loja-window.loja-sem-lampiao .loja-lamp { display: none; }
+
+@keyframes loja-lamp-sway {
+  0%, 100% { transform: rotate(calc(var(--lamp-amp) * -1)); }
+  50%      { transform: rotate(var(--lamp-amp)); }
+}
+@keyframes loja-lamp-flick {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  30%      { opacity: 0.82; transform: scale(0.96); }
+  55%      { opacity: 0.95; transform: scale(1.03); }
+  80%      { opacity: 0.86; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tema-tenda .loja-lamp,
+  .tema-tenda .loja-lamp__flame { animation: none; }
+}

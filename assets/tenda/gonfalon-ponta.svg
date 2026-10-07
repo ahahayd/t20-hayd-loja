@@ -1,0 +1,6 @@
+<!-- Ponta rabo-de-andorinha, a parte que transborda a janela.
+     Fatia de assets/tenda/gonfalon.svg (225×500), recortada SÓ pelo
+     viewBox e sem os ornamentos: paths, cores e gradiente são os mesmos
+     do original, que é o que faz as fatias casarem sem emenda. Como
+     refazer, se o gonfalon.svg mudar: ver AGENTS.md, seção do gonfalão. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 385 225 115" width="225" height="115"><defs><linearGradient id="c" x1="0" x2="1"><stop offset="0" stop-color="#5c161a"></stop><stop offset=".22" stop-color="#942429"></stop><stop offset=".5" stop-color="#a62c31"></stop><stop offset=".78" stop-color="#942429"></stop><stop offset="1" stop-color="#5c161a"></stop></linearGradient></defs><path d="M0 0H225V400L180 490L112.5 430L45 490L0 400Z" fill="url(#c)" stroke="#1a0f07" stroke-width="3"></path><path d="M12 12H213V394L176 468L112.5 412L49 468L12 394Z" fill="none" stroke="#d9a520" stroke-width="4" stroke-linejoin="round"></path><path d="M20 20H205V390L173 452L112.5 400L52 452L20 390Z" fill="none" stroke="#d9a520" stroke-width="1.5" stroke-dasharray="6 5"></path></svg>
