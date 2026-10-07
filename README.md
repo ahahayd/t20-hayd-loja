@@ -4,6 +4,10 @@
 
 Loja integrada para o sistema **Tormenta20** no FoundryVTT: um botão na ficha do personagem abre a vitrine com itens de compêndios, do mundo e individuais, com compra e venda descontando as moedas automaticamente.
 
+<p align="center">
+  <img src="assets/screenshots/loja-vitrine.png" alt="Vitrine da loja" width="800">
+</p>
+
 ## Requisitos
 
 - FoundryVTT **v13**
@@ -25,6 +29,11 @@ https://github.com/ahahayd/t20-hayd-loja/releases/latest/download/module.json
 Abra a ficha do personagem e clique em **Loja** no topo da janela. Busque ou filtre o item desejado e clique em **Comprar** — o preço é descontado das moedas (TC, T$, TO) e o item entra no inventário. Uma barra de percentual permite ajustar o valor da compra de 10% a 200% do preço, para pechinchas e mercadores gananciosos. Sem saldo suficiente, a compra é bloqueada.
 
 Também é possível comprar magias, como pergaminho (versão padrão) ou poção (com aprimoramentos escolhidos na hora).
+
+<p align="center">
+  <img src="assets/screenshots/loja-carrinho.png" alt="Carrinho de compras" width="400">
+  <img src="assets/screenshots/loja-aprimorar.png" alt="Itens superiores e encantados" width="400">
+</p>
 
 ### Vender
 
