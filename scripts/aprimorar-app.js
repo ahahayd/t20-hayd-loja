@@ -457,59 +457,65 @@ export class AprimorarApplication extends Application {
       : 't20-hayd-itens inativo: as entradas ficam listadas na descrição e o preço é ajustado.';
 
     return `
-      <div class="apr-cabecalho">
-        <button type="button" class="apr-voltar" title="Escolher outro item"><i class="fas fa-arrow-left"></i></button>
+      <header class="apr-cabecalho">
+        <button type="button" class="apr-voltar" data-tooltip="Escolher outro item"><i class="fas fa-arrow-left"></i></button>
         <img src="${alvo.img}" alt="" />
         <div class="apr-cabecalho-info">
           <strong>${escapar(alvo.nomeOriginal)}</strong>
           <small>${alvo.origem === 'loja' ? 'Item da loja' : 'Do inventário'} · valor ${precoDisplay(alvo.preco)}${calc.qtd > 1 ? ` · pilha de ${calc.qtd} munições` : ''}${alvo.separar ? ' · 1 unidade será separada da pilha' : ''}</small>
         </div>
-      </div>
+        <div class="apr-existentes" data-tooltip="${escapar(detecTexto.replace(/<[^>]+>/g, ''))}">
+          <label><span>Melhorias</span><input type="number" name="existM" min="0" max="20" value="${this._existM}" /></label>
+          <label><span>Encantos</span><input type="number" name="existE" min="0" max="20" value="${this._existE}" /></label>
+        </div>
+      </header>
 
-      <div class="apr-existentes">
-        <p>${detecTexto}</p>
-        <label>Melhorias já existentes <input type="number" name="existM" min="0" max="20" value="${this._existM}" /></label>
-        <label>Encantos já existentes <input type="number" name="existE" min="0" max="20" value="${this._existE}" /></label>
-      </div>
+      <p class="apr-detectado">${detecTexto}</p>
 
       <div class="apr-filtros">
         <input type="text" class="apr-busca" placeholder="Buscar melhoria, encanto ou material…" />
-        ${data.comCatalogo ? `<label><input type="checkbox" name="todasCats" ${this._todasCats ? 'checked' : ''} /> Mostrar todas as categorias</label>` : ''}
+        ${data.comCatalogo ? `<label class="apr-todas"><input type="checkbox" name="todasCats" ${this._todasCats ? 'checked' : ''} /> Todas as categorias</label>` : ''}
       </div>
 
       <div class="apr-entradas">${catalogoHtml}</div>
 
       ${data.avisos.length ? `<ul class="apr-avisos">${data.avisos.map(a => `<li><i class="fas fa-exclamation-triangle"></i> ${escapar(a)}</li>`).join('')}</ul>` : ''}
 
-      <div class="apr-rodape">
-        <div class="apr-rodape-linha">
-          <label>Forma
-            <select name="modo">
-              <option value="buy" ${this._modo === 'buy' ? 'selected' : ''}>Comprar</option>
-              <option value="craft" ${this._modo === 'craft' ? 'selected' : ''}>Fabricar</option>
-            </select>
-          </label>
-          <span class="apr-modo apr-modo-buy" ${this._modo === 'buy' ? '' : 'hidden'}>
-            <label>Valor <input type="number" name="percent" min="1" max="200" value="${this._percent}" /> %</label>
-          </span>
-          <span class="apr-modo apr-modo-craft" ${this._modo === 'craft' ? '' : 'hidden'}>
-            <label>Fração
-              <select name="fracao">${FRACOES.map(f => `<option value="${f.value}" ${Math.abs(f.value - this._fracao) < 1e-9 ? 'selected' : ''}>${f.label}</option>`).join('')}</select>
-            </label>
-            <label>Desconto matéria-prima (TP) <input type="number" name="desconto" min="0" step="0.1" value="${this._desconto}" /></label>
-          </span>
+      <footer class="apr-rodape">
+        <div class="apr-rodape-colunas">
+          <div class="apr-pagamento">
+            <div class="apr-rodape-linha">
+              <label>Forma
+                <select name="modo">
+                  <option value="buy" ${this._modo === 'buy' ? 'selected' : ''}>Comprar</option>
+                  <option value="craft" ${this._modo === 'craft' ? 'selected' : ''}>Fabricar</option>
+                </select>
+              </label>
+              <span class="apr-modo apr-modo-buy" ${this._modo === 'buy' ? '' : 'hidden'}>
+                <label>Valor <input type="number" name="percent" min="1" max="200" value="${this._percent}" /> %</label>
+              </span>
+              <span class="apr-modo apr-modo-craft" ${this._modo === 'craft' ? '' : 'hidden'}>
+                <label>Fração
+                  <select name="fracao">${FRACOES.map(f => `<option value="${f.value}" ${Math.abs(f.value - this._fracao) < 1e-9 ? 'selected' : ''}>${f.label}</option>`).join('')}</select>
+                </label>
+                <label>Desconto (TP) <input type="number" name="desconto" min="0" step="0.1" value="${this._desconto}" /></label>
+              </span>
+            </div>
+            <p class="apr-dica">${modoApi}</p>
+          </div>
+
+          <div class="apr-preview upgrade-preview">
+            <div><span>Melhorias <i class="apr-alerta apr-alerta-m" data-tooltip-direction="UP" data-tooltip="Esse módulo considera uma fórmula personalizada para itens acima de 4 melhorias ou 3 encantos" hidden>!</i></span> <b class="apr-p-m"></b></div>
+            <div><span>Encantos <i class="apr-alerta apr-alerta-e" data-tooltip-direction="UP" data-tooltip="Esse módulo considera uma fórmula personalizada para itens acima de 4 melhorias ou 3 encantos" hidden>!</i></span> <b class="apr-p-e"></b></div>
+            <div><span>Materiais</span> <b class="apr-p-mat"></b></div>
+            <div><span>Custo base</span> <b class="apr-p-base"></b></div>
+            <div><span>Novo valor do item</span> <b class="apr-p-final"></b></div>
+            <div class="apr-p-total-linha"><span>Total a pagar</span> <b class="apr-p-total"></b></div>
+          </div>
         </div>
-        <div class="apr-preview upgrade-preview">
-          <div><span>Melhorias <i class="apr-alerta apr-alerta-m" data-tooltip-direction="UP" data-tooltip="Esse módulo considera uma fórmula personalizada para itens acima de 4 melhorias ou 3 encantos" hidden>!</i></span> <b class="apr-p-m"></b></div>
-          <div><span>Encantos <i class="apr-alerta apr-alerta-e" data-tooltip-direction="UP" data-tooltip="Esse módulo considera uma fórmula personalizada para itens acima de 4 melhorias ou 3 encantos" hidden>!</i></span> <b class="apr-p-e"></b></div>
-          <div><span>Materiais</span> <b class="apr-p-mat"></b></div>
-          <div><span>Novo valor do item</span> <b class="apr-p-final"></b></div>
-          <div><span>Custo base</span> <b class="apr-p-base"></b></div>
-          <div class="apr-p-total-linha"><span>Total a pagar</span> <b class="apr-p-total"></b></div>
-        </div>
-        <p class="apr-dica">${modoApi}</p>
+
         <button type="button" class="apr-confirmar"><i class="fas fa-hammer-crash"></i> Aplicar</button>
-      </div>`;
+      </footer>`;
   }
 
   /** Atualiza só o resumo de preço, sem re-renderizar (mantém o foco). */

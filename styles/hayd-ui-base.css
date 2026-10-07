@@ -1,0 +1,1003 @@
+/* ==========================================================================
+   T20 Hayd GMTools — base visual compartilhada
+   --------------------------------------------------------------------------
+   Um único vocabulário para TODAS as janelas do módulo: tokens de cor,
+   espaço, raio e sombra, mais as primitivas (painel, barra de ferramentas,
+   botão, chip, medidor, lista, estado vazio) que as telas montam.
+
+   Três regras que valem para o arquivo inteiro:
+
+   1. NADA aqui é global. Tudo pende de `:is(.hayd-ui, .t20g-ui)`, a classe que cada janela
+      do módulo recebe. Um módulo de VTT divide a página com o sistema, com o
+      core e com outros módulos — vazar token ou seletor daqui é quebrar a
+      casa dos outros.
+   2. O tema do Foundry manda. Os tokens nascem das variáveis do core quando
+      elas existem, e o bloco de tema claro refaz a rampa inteira. Nenhuma
+      janela fica escura à força dentro de um mundo claro.
+   3. Animação só em `transform`, `opacity`, `background-color`, `border-color`
+      e `box-shadow` — as quatro primeiras são baratas, e a sombra só aparece
+      em elementos isolados. Sem `backdrop-filter` e sem `filter: blur()`:
+      numa mesa com a cena, o chat e os tokens animando, cada camada dessas
+      custa frame.
+   ========================================================================== */
+
+:is(.hayd-ui, .t20g-ui) {
+  /* ─── Superfícies ──────────────────────────────────────────────────────
+     Rampa quente e OPACA. Opaca é o ponto: as janelas do módulo deixavam a
+     textura de fundo do core atravessar o conteúdo, e era de onde vinha boa
+     parte da sensação de coisa inacabada. */
+  --t20g-s0: #15131b;   /* fundo da janela                    */
+  --t20g-s1: #1c1a24;   /* painel                             */
+  --t20g-s2: #24212d;   /* linha, campo, superfície elevada   */
+  --t20g-s3: #2e2a38;   /* hover                              */
+  --t20g-s4: #3a3545;   /* pressionado / selecionado          */
+
+  /* Traços. Dois pesos: o de separação e o de contorno. */
+  --t20g-line: color-mix(in oklab, #fff 9%, transparent);
+  --t20g-line-forte: color-mix(in oklab, #fff 16%, transparent);
+
+  /* ─── Texto ───────────────────────────────────────────────────────────
+     Três níveis bastam: valor, rótulo, apoio. */
+  --t20g-ink: #ece9f2;
+  --t20g-ink-2: #b3adc0;
+  --t20g-ink-3: #847e92;
+
+  /* ─── Destaque ────────────────────────────────────────────────────────
+     UM só, âmbar de brasa. A identidade de Tormenta é o carmim, mas carmim
+     como cor de interface briga com o vermelho de perigo/dano — e dois
+     vermelhos com significados diferentes na mesma tela é o tipo de ruído
+     que faz uma ferramenta parecer amadora. O âmbar é da mesma família
+     quente, convive com o carmim do mundo e deixa o vermelho livre para
+     dizer só uma coisa: destruir. */
+  --t20g-accent: #e2a44c;
+  --t20g-accent-forte: #f0b75f;
+  --t20g-accent-fundo: color-mix(in oklab, var(--t20g-accent) 14%, transparent);
+  --t20g-accent-linha: color-mix(in oklab, var(--t20g-accent) 42%, transparent);
+  --t20g-ink-sobre-accent: #1a1208;
+
+  /* ─── Cores de estado ─────────────────────────────────────────────────
+     Semânticas, nunca decorativas: cada uma só aparece quando significa
+     exatamente aquilo. */
+  --t20g-perigo: #e05a4d;
+  --t20g-sucesso: #4fae72;
+  --t20g-aviso: #d8a033;
+  --t20g-info: #5b9bd8;
+
+  /* Recursos de ficha (PV/PM/carga) — tons próprios, porque são leitura de
+     dado e não estado de interface. */
+  --t20g-pv: #c2443c;
+  --t20g-pm: #3f7fc4;
+  --t20g-carga: #9a8544;
+
+  /* ─── Raio ────────────────────────────────────────────────────────────
+     Escala, não valor único: mais fechado por dentro, mais solto por fora. */
+  --t20g-r1: 4px;
+  --t20g-r2: 7px;
+  --t20g-r3: 10px;
+  --t20g-r-pill: 999px;
+
+  /* ─── Espaço ──────────────────────────────────────────────────────────── */
+  --t20g-e1: 4px;
+  --t20g-e2: 6px;
+  --t20g-e3: 8px;
+  --t20g-e4: 12px;
+  --t20g-e5: 16px;
+  --t20g-e6: 24px;
+
+  /* ─── Sombra ──────────────────────────────────────────────────────────
+     Tingida com o roxo-escuro da rampa, nunca preto puro: sombra preta
+     sobre fundo quente acinzenta tudo em volta. Luz vinda de cima. */
+  --t20g-sombra1: 0 1px 2px rgb(10 7 16 / 45%);
+  --t20g-sombra2: 0 6px 16px -8px rgb(10 7 16 / 75%);
+
+  /* ─── Foco ────────────────────────────────────────────────────────────── */
+  --t20g-foco: 0 0 0 2px color-mix(in oklab, var(--t20g-accent) 55%, transparent);
+
+  --t20g-transicao: 120ms ease;
+
+  color: var(--t20g-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tema claro do Foundry: a rampa inteira é refeita, não só "clareada".
+   O destaque mantém o tom, escurecido para passar no contraste sobre claro. */
+.theme-light :is(.hayd-ui, .t20g-ui),
+:is(.hayd-ui, .t20g-ui).theme-light {
+  --t20g-s0: #efecf2;
+  --t20g-s1: #f7f5f9;
+  --t20g-s2: #e9e5ee;
+  --t20g-s3: #ddd8e4;
+  --t20g-s4: #cec8d8;
+  --t20g-line: color-mix(in oklab, #1a1522 14%, transparent);
+  --t20g-line-forte: color-mix(in oklab, #1a1522 26%, transparent);
+  --t20g-ink: #1f1a27;
+  --t20g-ink-2: #514a5e;
+  --t20g-ink-3: #756d83;
+  --t20g-accent: #a9661a;
+  --t20g-accent-forte: #8d5413;
+  --t20g-ink-sobre-accent: #fff6e8;
+  --t20g-perigo: #b23a2e;
+  --t20g-sucesso: #2f7d4e;
+  --t20g-aviso: #8a6410;
+  --t20g-info: #2f6ca6;
+  --t20g-pv: #a93229;
+  --t20g-pm: #2f6ca6;
+  --t20g-carga: #7a6526;
+  --t20g-sombra1: 0 1px 2px rgb(40 30 60 / 14%);
+  --t20g-sombra2: 0 6px 16px -8px rgb(40 30 60 / 30%);
+}
+
+/* O corpo da janela é opaco e some com a textura do core por baixo do
+   conteúdo. É a mudança de maior efeito deste arquivo. */
+:is(.hayd-ui, .t20g-ui) .window-content {
+  background: var(--t20g-s0);
+  color: var(--t20g-ink);
+  padding: var(--t20g-e4);
+}
+
+/* Quem respeita `prefers-reduced-motion` não recebe transição nenhuma. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.hayd-ui, .t20g-ui) * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+/* ══ Tipografia ═══════════════════════════════════════════════════════════
+   Quatro papéis, e só. O módulo inteiro usava ~13px em negrito para tudo:
+   sem escala, nada tem hierarquia e o olho não sabe onde pousar. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-titulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--t20g-ink);
+  text-wrap: balance;
+}
+
+/* Rótulo de seção: pequeno, espaçado, discreto. Estrutura a tela sem
+   competir com o conteúdo. */
+:is(.hayd-ui, .t20g-ui) .t20g-rotulo {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-apoio {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--t20g-ink-2);
+}
+
+/* Número que se lê de relance (CD, defesa, total). Tabular para a coluna
+   não dançar quando o valor muda de 9 para 10. */
+:is(.hayd-ui, .t20g-ui) .t20g-valor {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink);
+}
+
+/* ══ Painel ═══════════════════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) .t20g-painel {
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  box-shadow: var(--t20g-sombra1);
+  overflow: hidden;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  min-height: 34px;
+  padding: var(--t20g-e2) var(--t20g-e4);
+  background: var(--t20g-s2);
+  border-bottom: 1px solid var(--t20g-line);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo > i {
+  color: var(--t20g-accent);
+  font-size: 0.875rem;
+}
+
+/* Empurra para a direita o que vier depois (botões do cabeçalho). */
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo > .t20g-espaco {
+  margin-inline-start: auto;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-painel__corpo {
+  padding: var(--t20g-e4);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-painel__corpo--liso {
+  padding: 0;
+}
+
+/* ══ Barra de ferramentas ════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) .t20g-barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--t20g-e2);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+/* ══ Botões ═══════════════════════════════════════════════════════════════
+   Um botão, quatro variantes. O módulo tinha verde para "ativar", dourado
+   para "aparatos", vermelho para "rolar" e contorno para "limpar" — quatro
+   cores sem hierarquia nenhuma, lado a lado. Aqui a cor diz importância:
+   âmbar é a ação principal da tela (uma por tela), o resto é neutro, e
+   vermelho é só para destruir. */
+
+:is(.hayd-ui, .t20g-ui) :where(button, a).t20g-btn,
+:is(.hayd-ui, .t20g-ui) .t20g-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--t20g-e2);
+  min-height: 28px;
+  width: auto;
+  padding: 0 var(--t20g-e4);
+  margin: 0;
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  box-shadow: none;
+  color: var(--t20g-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao),
+    transform var(--t20g-transicao), color var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn > i {
+  margin: 0;              /* o core dá margin-right nos <i> dentro de botão */
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn:hover:not(:disabled) {
+  background: var(--t20g-s3);
+  border-color: var(--t20g-line-forte);
+  color: var(--t20g-ink);
+}
+
+/* Resposta física ao clique: 1px para baixo é o bastante para o dedo sentir. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--t20g-s4);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--t20g-foco);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn:disabled,
+:is(.hayd-ui, .t20g-ui) .t20g-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+/* Principal — uma por tela. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario {
+  background: var(--t20g-accent);
+  border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
+  color: var(--t20g-ink-sobre-accent);
+  font-weight: 600;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario > i { opacity: 1; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario:hover:not(:disabled) {
+  background: var(--t20g-accent-forte);
+  color: var(--t20g-ink-sobre-accent);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario:active:not(:disabled) {
+  background: color-mix(in oklab, var(--t20g-accent) 85%, #000);
+}
+
+/* Fantasma — ação secundária que não deve puxar o olho. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn--fantasma {
+  background: transparent;
+  border-color: transparent;
+  color: var(--t20g-ink-2);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--fantasma:hover:not(:disabled) {
+  background: var(--t20g-s2);
+  color: var(--t20g-ink);
+}
+
+/* Perigo — e só quando destrói algo. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn--perigo {
+  background: transparent;
+  border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent);
+  color: var(--t20g-perigo);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--perigo:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--t20g-perigo) 16%, transparent);
+  border-color: var(--t20g-perigo);
+  color: var(--t20g-perigo);
+}
+
+/* Só ícone: quadrado de verdade. O Foundry dá largura generosa a todo
+   <button>, e era por isso que os ícones apareciam descentralizados. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone {
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  flex: 0 0 28px;
+  padding: 0;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone > i { opacity: 0.75; }
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone:hover:not(:disabled) > i { opacity: 1; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn--pequeno {
+  min-height: 24px;
+  padding: 0 var(--t20g-e3);
+  font-size: 0.75rem;
+}
+
+/* Grupo colado: botões viram um segmento só. */
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo {
+  display: inline-flex;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn {
+  border-radius: 0;
+  margin-inline-start: -1px;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:first-child {
+  border-start-start-radius: var(--t20g-r1);
+  border-end-start-radius: var(--t20g-r1);
+  margin-inline-start: 0;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:last-child {
+  border-start-end-radius: var(--t20g-r1);
+  border-end-end-radius: var(--t20g-r1);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:hover { z-index: 1; }
+
+/* ══ Stepper (− valor +) ══════════════════════════════════════════════════
+   O par de botões com um número solto no meio não lia como um controle só.
+   Aqui vira uma peça: moldura única, número tabular no centro. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  overflow: hidden;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button {
+  width: 26px;
+  min-width: 26px;
+  flex: 0 0 26px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--t20g-ink-2);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--t20g-transicao), color var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button > i { margin: 0; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button:hover:not(:disabled) {
+  background: var(--t20g-s3);
+  color: var(--t20g-ink);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button:disabled { opacity: 0.35; cursor: default; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-stepper__valor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 0 var(--t20g-e2);
+  border-inline: 1px solid var(--t20g-line);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink);
+}
+
+/* ══ Campos ═══════════════════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) input[type="text"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) input[type="number"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) input[type="search"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) select.t20g-campo,
+:is(.hayd-ui, .t20g-ui) .t20g-campo {
+  min-height: 28px;
+  padding: 0 var(--t20g-e3);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  box-shadow: none;
+  color: var(--t20g-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-campo:hover:not(:disabled) { border-color: var(--t20g-line-forte); background: var(--t20g-s3); }
+
+:is(.hayd-ui, .t20g-ui) .t20g-campo:focus,
+:is(.hayd-ui, .t20g-ui) .t20g-campo:focus-visible {
+  outline: none;
+  border-color: var(--t20g-accent-linha);
+  box-shadow: var(--t20g-foco);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-campo::placeholder { color: var(--t20g-ink-3); }
+
+/* Rótulo em cima do controle: alinhamento garantido entre colunas de
+   larguras diferentes. */
+:is(.hayd-ui, .t20g-ui) .t20g-grupo-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e1);
+  min-width: 0;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-grupo-campo > label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+/* ══ Chip ═════════════════════════════════════════════════════════════════
+   Etiqueta de leitura. Neutra por padrão; a cor só entra com o modificador
+   de estado, e aí quer dizer alguma coisa. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t20g-e1);
+  height: 20px;
+  padding: 0 var(--t20g-e2);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  color: var(--t20g-ink-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip > i { font-size: 0.625rem; opacity: 0.8; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip--perigo {
+  background: color-mix(in oklab, var(--t20g-perigo) 14%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-perigo) 38%, transparent);
+  color: color-mix(in oklab, var(--t20g-perigo) 80%, var(--t20g-ink));
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip--sucesso {
+  background: color-mix(in oklab, var(--t20g-sucesso) 14%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-sucesso) 38%, transparent);
+  color: color-mix(in oklab, var(--t20g-sucesso) 80%, var(--t20g-ink));
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip--aviso {
+  background: color-mix(in oklab, var(--t20g-aviso) 16%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-aviso) 40%, transparent);
+  color: color-mix(in oklab, var(--t20g-aviso) 82%, var(--t20g-ink));
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-chip--accent {
+  background: var(--t20g-accent-fundo);
+  border-color: var(--t20g-accent-linha);
+  color: var(--t20g-accent-forte);
+}
+
+/* ══ Medidor ══════════════════════════════════════════════════════════════
+   PV, PM e carga eram três barras cruas empilhadas, com o número ora dentro
+   da barra, ora flutuando no meio da linha. Aqui: rótulo à esquerda, valor
+   tabular à direita, trilho fino embaixo — a mesma leitura para os três. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0 var(--t20g-e2);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__rotulo {
+  grid-column: 1;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__valor {
+  grid-column: 3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink-2);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__trilho {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 6px;
+  margin-top: 3px;
+  background: var(--t20g-s2);
+  border-radius: var(--t20g-r-pill);
+  overflow: hidden;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__preenche {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t20g-medidor-cor, var(--t20g-accent));
+  /* Largura é o único jeito honesto aqui (o trilho é a referência), mas
+     muda só quando o valor muda — não é animação de quadro a quadro. */
+  transition: width 160ms ease;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--pv    { --t20g-medidor-cor: var(--t20g-pv); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--pm    { --t20g-medidor-cor: var(--t20g-pm); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--carga { --t20g-medidor-cor: var(--t20g-carga); }
+
+/* Acima do limite: o trilho inteiro avisa, sem precisar de texto vermelho. */
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--excedido { --t20g-medidor-cor: var(--t20g-perigo); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--excedido .t20g-medidor__valor { color: var(--t20g-perigo); }
+
+/* ══ Lista ════════════════════════════════════════════════════════════════
+   `content-visibility` entra aqui de propósito: estas listas chegam a
+   centenas de linhas (vínculos de tesouro, inventário de grupo) e o
+   navegador passa a só compor o que está à vista. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-lista > * + * { border-top: 1px solid var(--t20g-line); }
+
+:is(.hayd-ui, .t20g-ui) .t20g-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  min-height: 36px;
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: transparent;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 36px;
+  transition: background-color var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-linha:hover { background: var(--t20g-s2); }
+
+:is(.hayd-ui, .t20g-ui) .t20g-linha__nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--t20g-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-linha__apoio {
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
+}
+
+/* Ícone/retrato das linhas: quadrado arredondado, nunca círculo — combina
+   com o resto dos cantos e não corta arte de ficha. */
+:is(.hayd-ui, .t20g-ui) .t20g-miniatura {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  object-fit: cover; object-position: top;
+  background: var(--t20g-s2);
+}
+
+/* ══ Estado vazio ═════════════════════════════════════════════════════════
+   Uma frase cinza no meio do nada é desperdício: o lugar mais visível da
+   tela é onde o usuário está parado sem saber o que fazer. */
+
+:is(.hayd-ui, .t20g-ui) .t20g-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--t20g-e2);
+  padding: var(--t20g-e6) var(--t20g-e5);
+  text-align: center;
+  color: var(--t20g-ink-3);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-vazio > i {
+  font-size: 1.5rem;
+  opacity: 0.35;
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-vazio__titulo {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--t20g-ink-2);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-vazio__texto {
+  max-width: 44ch;      /* linha curta o bastante para ler de um fôlego */
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--t20g-ink-3);
+  text-wrap: pretty;
+}
+
+/* ══ Abas ═════════════════════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) .t20g-abas {
+  display: flex;
+  gap: var(--t20g-e1);
+  padding: 0 var(--t20g-e2);
+  border-bottom: 1px solid var(--t20g-line);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-abas > a,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  padding: var(--t20g-e3) var(--t20g-e4);
+  background: transparent;
+  border: 0;
+  color: var(--t20g-ink-3);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-abas > *:hover { color: var(--t20g-ink); text-shadow: none; }
+
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .ativa,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .active {
+  color: var(--t20g-ink);
+  font-weight: 600;
+}
+
+/* A aba ativa é marcada por uma régua embaixo, não por um bloco de fundo:
+   menos peso, e a linha dá a direção do conteúdo que vem a seguir. */
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .ativa::after,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .active::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--t20g-e2);
+  bottom: -1px;
+  height: 2px;
+  background: var(--t20g-accent);
+  border-radius: var(--t20g-r-pill) var(--t20g-r-pill) 0 0;
+}
+
+/* ══ Divisor com rótulo ══════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) .t20g-divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  margin: var(--t20g-e4) 0 var(--t20g-e2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-divisor::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--t20g-line);
+}
+
+:is(.hayd-ui, .t20g-ui) .t20g-divisor:first-child { margin-top: 0; }
+
+/* ══ Utilitários ══════════════════════════════════════════════════════════ */
+
+:is(.hayd-ui, .t20g-ui) .t20g-pilha   { display: flex; flex-direction: column; gap: var(--t20g-e3); }
+:is(.hayd-ui, .t20g-ui) .t20g-fileira { display: flex; align-items: center; gap: var(--t20g-e2); }
+:is(.hayd-ui, .t20g-ui) .t20g-cresce  { flex: 1 1 auto; min-width: 0; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola    { overflow-y: auto; overscroll-behavior: contain; }
+
+/* Barra de rolagem discreta, no tom da janela. */
+:is(.hayd-ui, .t20g-ui) .t20g-rola { scrollbar-width: thin; scrollbar-color: var(--t20g-s4) transparent; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar { width: 8px; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar-thumb {
+  background: var(--t20g-s4);
+  border-radius: var(--t20g-r-pill);
+}
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar-track { background: transparent; }
+
+/* ══ Rodapé de diálogo ════════════════════════════════════════════════════
+   O DialogV2 monta os próprios botões, fora do nosso markup. Sem isto, uma
+   janela redesenhada terminava num rodapé com a aparência padrão do core —
+   e é justamente o último elemento que o olho encontra antes de clicar. */
+
+:is(.hayd-ui, .t20g-ui) .dialog-buttons,
+:is(.hayd-ui, .t20g-ui) .form-footer {
+  display: flex;
+  gap: var(--t20g-e2);
+  padding-top: var(--t20g-e4);
+  margin-top: var(--t20g-e2);
+  border-top: 1px solid var(--t20g-line);
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--t20g-e2);
+  min-height: 30px;
+  padding: 0 var(--t20g-e4);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  box-shadow: none;
+  color: var(--t20g-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao),
+    transform var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button > i { margin: 0; opacity: 0.85; }
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:hover:not(:disabled) {
+  background: var(--t20g-s3);
+  border-color: var(--t20g-line-forte);
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:focus-visible {
+  outline: none;
+  box-shadow: var(--t20g-foco);
+}
+
+/* O botão padrão do diálogo (o que o Enter aciona) é a ação principal. */
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="ok"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button.default,
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[autofocus] {
+  background: var(--t20g-accent);
+  border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
+  color: var(--t20g-ink-sobre-accent);
+  font-weight: 600;
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="ok"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button.default:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[autofocus]:hover:not(:disabled) {
+  background: var(--t20g-accent-forte);
+  color: var(--t20g-ink-sobre-accent);
+}
+
+/* Um "Fechar" sozinho no rodapé não é ação principal: é saída. Fica neutro
+   para não disputar atenção com os controles da própria janela. */
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="fechar"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="close"] {
+  background: var(--t20g-s2);
+  border-color: var(--t20g-line-forte);
+  color: var(--t20g-ink-2);
+  font-weight: 500;
+}
+
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="fechar"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="close"]:hover:not(:disabled) {
+  background: var(--t20g-s3);
+  color: var(--t20g-ink);
+}
+
+/* ══ Ponte para as telas antigas ═══════════════════════════════════════════
+   O módulo tem perto de cinquenta diálogos. Reescrever o markup de todos
+   seria meses de trabalho e meses de risco; o que eles precisam é só de
+   coerência: o mesmo botão, o mesmo campo, o mesmo título.
+
+   Estas regras pegam qualquer controle NÃO convertido dentro de uma janela
+   do módulo e dão a ele a aparência do sistema. Tudo que já virou componente
+   (`.t20g-btn`, `.t20g-campo`, stepper, rodapé) fica de fora pelo `:not`,
+   então não há disputa de especificidade entre ponte e componente — é um ou
+   outro, nunca os dois. */
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)) {
+  min-height: 28px;
+  padding: 0 var(--t20g-e3);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  box-shadow: none;
+  color: var(--t20g-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao),
+    transform var(--t20g-transicao);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):hover:not(:disabled) {
+  background: var(--t20g-s3);
+  border-color: var(--t20g-line-forte);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--t20g-s4);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control)):focus-visible {
+  outline: none;
+  box-shadow: var(--t20g-foco);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(
+  input[type="text"]:not(.t20g-campo), input[type="number"]:not(.t20g-campo),
+  input[type="search"]:not(.t20g-campo), select:not(.t20g-campo), textarea:not(.t20g-campo)
+) {
+  min-height: 28px;
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  box-shadow: none;
+  color: var(--t20g-ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(
+  input[type="text"]:not(.t20g-campo), input[type="number"]:not(.t20g-campo),
+  input[type="search"]:not(.t20g-campo), select:not(.t20g-campo), textarea:not(.t20g-campo)
+):focus {
+  outline: none;
+  border-color: var(--t20g-accent-linha);
+  box-shadow: var(--t20g-foco);
+}
+
+/* Títulos de seção das telas antigas: viram o mesmo rótulo pequeno e
+   espaçado do resto do módulo, em vez de cada janela inventar um tamanho. */
+:is(.hayd-ui, .t20g-ui) .window-content :where(h3:not([class]), h4:not([class])) {
+  margin: 0 0 var(--t20g-e2);
+  border: 0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+/* `p.notes` é o texto de apoio do core; no módulo ele aparece em quase toda
+   janela e estava ora cinza-claro, ora quase invisível. */
+:is(.hayd-ui, .t20g-ui) .window-content p.notes,
+:is(.hayd-ui, .t20g-ui) .window-content .hint {
+  margin: 0 0 var(--t20g-e2);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--t20g-ink-3);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content hr {
+  border: 0;
+  border-top: 1px solid var(--t20g-line);
+  margin: var(--t20g-e4) 0;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content :where(label) { color: var(--t20g-ink-2); }
+
+/* ══ Tabelas ══════════════════════════════════════════════════════════════
+   Tabela de referência (níveis de negócio, custos, impostos) aparece em
+   quase todo módulo da família, e cada uma vinha com a borda e o
+   espaçamento que o navegador dá de graça. */
+
+:is(.hayd-ui, .t20g-ui) .window-content table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content thead th {
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-s2);
+  border: 0;
+  border-bottom: 1px solid var(--t20g-line);
+  color: var(--t20g-ink-3);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody td {
+  padding: var(--t20g-e2) var(--t20g-e3);
+  border: 0;
+  border-top: 1px solid var(--t20g-line);
+  color: var(--t20g-ink-2);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:first-child td { border-top: 0; }
+
+/* Zebra em vez de grade: menos traço, mesma leitura de linha. */
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:nth-child(even) td {
+  background: color-mix(in oklab, var(--t20g-s2) 55%, transparent);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:hover td { background: var(--t20g-s2); }
+
+/* A linha em destaque (o nível atual, a faixa escolhida) fica marcada pela
+   lateral, que não disputa com o fundo da zebra. */
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr.ativa td,
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr.atual td {
+  background: var(--t20g-accent-fundo);
+  color: var(--t20g-ink);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:is(.ativa, .atual) td:first-child {
+  box-shadow: inset 2px 0 0 var(--t20g-accent);
+}

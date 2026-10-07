@@ -1,3 +1,7 @@
+/* Base visual compartilhada dos módulos Hayd. Vale apenas para as janelas
+   marcadas com .hayd-ui — a janela da Loja e o carrinho NÃO são marcados. */
+@import url("hayd-ui-base.css");
+
 /* ════════════════════════════════════════════════════════════════
    t20-hayd-loja — Estilos da Loja para Tormenta20
 
@@ -457,111 +461,456 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
   font-size: 0.9em;
 }
 
-/* ── Itens Superiores e Encantados ─────────────────────── */
-.t20-loja-aprimorar .window-content { display: flex; flex-direction: column; }
-.apr-root { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
+/* ── Itens Superiores e Encantados ───────────────────────
+   Esta janela é a única da Loja que adota a base visual da família
+   (hayd-ui-base.css). Ela é um formulário denso — identidade do item,
+   contagem do que já existe, três catálogos, forma de pagamento e um
+   resumo de preço — e estava tudo empilhado com o mesmo peso, sem
+   respiro, com a lista (que é o trabalho de verdade) espremida no meio.
+
+   Agora são três zonas: cabeçalho fixo, lista ocupando o que sobra, e
+   rodapé fixo com pagamento e resumo lado a lado. */
+
+.t20-loja-aprimorar .window-content { display: flex; flex-direction: column; padding: 0; }
+
+.apr-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+  height: 100%;
+  min-height: 0;
+  padding: var(--t20g-e4);
+  background: var(--t20g-s0);
+}
+
 .apr-root [hidden] { display: none !important; }
-.apr-abas { display: flex; gap: 6px; }
+
+/* ---- Tela de escolha do item ---- */
+.apr-abas { display: flex; gap: var(--t20g-e2); }
 .apr-abas button { flex: 1; }
-.apr-abas button.active { border-color: var(--loja-destaque, #960505); font-weight: bold; }
-.apr-lista { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
+
+.hayd-ui .apr-abas button.active {
+  background: var(--t20g-accent-fundo);
+  border-color: var(--t20g-accent-linha);
+  color: var(--t20g-accent-forte);
+  font-weight: 600;
+}
+
+.apr-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
 .apr-item {
-  display: flex; align-items: center; gap: 8px; padding: 4px 6px; cursor: pointer;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 38px;
+  transition: background-color var(--t20g-transicao);
 }
-.apr-item:hover { background: rgba(128, 128, 128, 0.15); }
-.apr-item img { width: 28px; height: 28px; border: none; flex: 0 0 auto; }
-.apr-item-nome { flex: 1; }
-.apr-item-preco { font-size: 0.9em; opacity: 0.8; }
+
+.apr-item + .apr-item { border-top: 1px solid var(--t20g-line); }
+.apr-item:hover { background: var(--t20g-s2); }
+
+.apr-item img {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  object-fit: cover;
+  object-position: top;
+}
+
+.apr-item-nome { flex: 1; font-size: 0.8125rem; font-weight: 500; }
+.apr-item-preco { font-size: 0.75rem; color: var(--t20g-ink-2); font-variant-numeric: tabular-nums; }
+
 .apr-badge, .apr-entrada-custo {
-  font-size: 0.8em; padding: 0 6px; border-radius: 8px;
-  border: 1px solid rgba(128, 128, 128, 0.4); white-space: nowrap;
+  padding: 0 var(--t20g-e2);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.apr-vazio, .apr-dica { font-size: 0.9em; opacity: 0.75; margin: 0; }
-.apr-cabecalho { display: flex; align-items: center; gap: 8px; }
-.apr-cabecalho .apr-voltar { flex: 0 0 auto; width: auto; }
-.apr-cabecalho img { width: 36px; height: 36px; border: none; }
-.apr-cabecalho-info { display: flex; flex-direction: column; }
-.apr-cabecalho-info small { opacity: 0.75; }
-.apr-existentes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.9em; }
-.apr-existentes p { flex-basis: 100%; margin: 0; }
-.apr-existentes input, .apr-rodape input[type="number"] { width: 60px; }
-.apr-filtros { display: flex; align-items: center; gap: 8px; }
+
+.apr-vazio, .apr-dica { margin: 0; font-size: 0.75rem; color: var(--t20g-ink-3); }
+.apr-vazio { padding: var(--t20g-e5); text-align: center; }
+
+/* ---- Cabeçalho: identidade do item + o que ele já tem ---- */
+.apr-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+.hayd-ui .apr-cabecalho .apr-voltar {
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.apr-cabecalho img {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r2);
+  object-fit: cover;
+  object-position: top;
+}
+
+.apr-cabecalho-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+
+.apr-cabecalho-info strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apr-cabecalho-info small { font-size: 0.6875rem; color: var(--t20g-ink-3); }
+
+/* O que o item já tem mora no cabeçalho: é informação SOBRE o item, não um
+   passo do fluxo — e ocupava uma faixa inteira da janela para dois números. */
+.apr-existentes { display: flex; gap: var(--t20g-e2); flex: 0 0 auto; }
+
+.apr-existentes label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 2px var(--t20g-e2);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+}
+
+.apr-existentes label > span {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+.hayd-ui .apr-existentes input {
+  width: 46px;
+  min-height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.apr-detectado { margin: 0; font-size: 0.6875rem; color: var(--t20g-ink-3); }
+.apr-detectado b { color: var(--t20g-ink-2); }
+
+/* ---- Filtros ---- */
+.apr-filtros { display: flex; align-items: center; gap: var(--t20g-e3); }
 .apr-filtros .apr-busca { flex: 1; }
-.apr-filtros label { white-space: nowrap; font-size: 0.9em; }
-.apr-entradas { flex: 1; min-height: 120px; overflow-y: auto; }
-.apr-grupo-superior { --apr-cor: #9aa4b1; }
+
+.apr-todas {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--t20g-ink-2);
+}
+
+.hayd-ui .apr-todas input { accent-color: var(--t20g-accent); margin: 0; }
+
+/* ---- Catálogo ---- */
+.apr-entradas {
+  flex: 1;
+  min-height: 140px;
+  overflow-y: auto;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+/* Cada aba tem a própria cor porque são três catálogos de natureza
+   diferente (melhoria, material, encanto): aqui a cor é categoria, não
+   enfeite, e é o único lugar da janela onde ela varia. */
+.apr-grupo-superior { --apr-cor: #8fa3bd; }
 .apr-grupo-material { --apr-cor: #c98a3a; }
-.apr-grupo-encanto  { --apr-cor: #8e6bd6; }
+.apr-grupo-encanto  { --apr-cor: #9a7ce0; }
+
 .apr-abas-entradas {
-  position: sticky; top: 0; z-index: 1;
-  display: flex; gap: 4px; padding-bottom: 6px;
-  background: var(--color-bg-option, rgba(20, 20, 24, 0.92));
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 0;
+  background: var(--t20g-s2);
+  border-bottom: 1px solid var(--t20g-line);
 }
-.apr-aba {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  border: 1px solid color-mix(in srgb, var(--apr-cor) 45%, transparent);
-  border-bottom: 3px solid color-mix(in srgb, var(--apr-cor) 35%, transparent);
-  background: color-mix(in srgb, var(--apr-cor) 8%, transparent);
-  opacity: 0.75;
+
+.hayd-ui .apr-aba {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--t20g-e2);
+  min-height: 34px;
+  padding: 0 var(--t20g-e3);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--t20g-ink-3);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: color var(--t20g-transicao), background-color var(--t20g-transicao);
 }
+
+.hayd-ui .apr-aba:hover { background: var(--t20g-s3); color: var(--t20g-ink); }
 .apr-aba i { color: var(--apr-cor); }
-.apr-aba:hover { opacity: 1; }
-.apr-aba.active {
-  opacity: 1; font-weight: bold;
-  border-bottom-color: var(--apr-cor);
-  background: color-mix(in srgb, var(--apr-cor) 22%, transparent);
+
+.hayd-ui .apr-aba.active {
+  background: var(--t20g-s1);
+  color: var(--t20g-ink);
+  font-weight: 600;
 }
+
+/* A régua embaixo usa a cor da categoria: diz qual catálogo está aberto. */
+.hayd-ui .apr-aba.active::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--apr-cor);
+}
+
 .apr-aba-cont {
-  font-weight: normal; font-size: 0.85em; color: var(--apr-cor);
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--t20g-r-pill);
+  background: color-mix(in oklab, var(--apr-cor) 22%, transparent);
+  color: var(--apr-cor);
+  font-size: 0.6875rem;
+  font-weight: 700;
 }
-.apr-aba-cont::before { content: '· '; opacity: 0.6; }
-.apr-grupo {
-  border-left: 4px solid var(--apr-cor);
-  border-radius: 3px;
-  padding: 2px 6px 4px;
-  background: color-mix(in srgb, var(--apr-cor) 6%, transparent);
+
+.apr-grupo { padding: var(--t20g-e2) var(--t20g-e3) var(--t20g-e3); }
+
+.apr-grupo-dica {
+  margin: var(--t20g-e2) 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
 }
+
 .apr-separador {
-  display: flex; align-items: center; gap: 8px;
-  margin: 8px 0 2px; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6;
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  margin: var(--t20g-e4) 0 var(--t20g-e2);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
 }
+
 .apr-separador::before, .apr-separador::after {
-  content: ''; flex: 1; border-top: 1px solid color-mix(in srgb, var(--apr-cor) 50%, transparent);
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--t20g-line);
 }
-.apr-grupo-dica { margin: 2px 0 4px; font-size: 0.8em; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.04em; }
-.apr-entrada:last-child { border-bottom: none; }
-.apr-entrada:has(input:checked) { background: color-mix(in srgb, var(--apr-cor) 16%, transparent); border-radius: 3px; }
-.apr-entrada input:checked + .apr-entrada-nome { color: var(--apr-cor); }
-.apr-grupo .apr-entrada-custo { border-color: color-mix(in srgb, var(--apr-cor) 60%, transparent); }
+
+/* Linha do catálogo: marca | nome + benefício | preço. O benefício desce
+   para a segunda linha, alinhado ao nome. */
 .apr-entrada {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
-  column-gap: 6px; padding: 3px 4px; border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--t20g-e3);
+  row-gap: 1px;
+  padding: var(--t20g-e2);
+  border-radius: var(--t20g-r1);
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 42px;
+  transition: background-color var(--t20g-transicao);
 }
-.apr-entrada.possui { opacity: 0.5; }
-.apr-entrada-nome { font-weight: 600; }
-.apr-entrada-benef { grid-column: 2 / 4; font-size: 0.85em; opacity: 0.8; }
-.apr-custom { display: flex; gap: 6px; margin-bottom: 4px; }
+
+.apr-entrada:hover { background: var(--t20g-s2); }
+.apr-entrada + .apr-entrada { border-top: 1px solid var(--t20g-line); border-radius: 0; }
+.apr-entrada.possui { opacity: 0.45; cursor: default; }
+
+.hayd-ui .apr-entrada > input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--apr-cor);
+}
+
+.apr-entrada-nome { font-size: 0.8125rem; font-weight: 600; color: var(--t20g-ink); }
+
+.apr-entrada-benef {
+  grid-column: 2 / 4;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--t20g-ink-3);
+  text-wrap: pretty;
+}
+
+.apr-entrada:has(input:checked) { background: color-mix(in oklab, var(--apr-cor) 14%, transparent); }
+.apr-entrada:has(input:checked) .apr-entrada-nome { color: var(--apr-cor); }
+
+.apr-grupo .apr-entrada-custo {
+  border-color: color-mix(in oklab, var(--apr-cor) 45%, transparent);
+  color: var(--t20g-ink-2);
+}
+
+.apr-custom { display: flex; gap: var(--t20g-e2); margin-bottom: var(--t20g-e2); }
 .apr-custom select { flex: 0 0 auto; width: auto; }
 .apr-custom input { flex: 1; }
 .apr-custom button, .apr-custom-add { flex: 0 0 auto; width: auto; }
-.apr-avisos { list-style: none; margin: 0; padding: 4px 8px; font-size: 0.85em; color: #c9772b; }
-.apr-rodape { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
-.apr-rodape-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.apr-rodape-linha label { display: flex; align-items: center; gap: 4px; }
-.apr-rodape input[name="nome"] { width: 360px; max-width: 100%; }
-.apr-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
-.apr-preview div { display: flex; justify-content: space-between; gap: 8px; }
-.apr-alerta {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; margin-left: 3px; border-radius: 50%;
-  font-style: normal; font-weight: bold; font-size: 0.75em; line-height: 1;
-  background: #c9772b; color: #111; cursor: help; vertical-align: middle;
+
+.apr-avisos {
+  list-style: none;
+  margin: 0;
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: color-mix(in oklab, var(--t20g-aviso) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--t20g-aviso) 35%, transparent);
+  border-radius: var(--t20g-r1);
+  font-size: 0.75rem;
+  color: color-mix(in oklab, var(--t20g-aviso) 85%, var(--t20g-ink));
 }
-.apr-p-total-linha { font-size: 1.1em; }
-.apr-p-total.too-expensive { color: #e06c5a; }
-.tema-hayd .apr-item:hover { background: var(--loja-destaque-fundo); }
-.tema-hayd .apr-badge, .tema-hayd .apr-entrada-custo { border-color: var(--loja-borda); }
+
+/* ---- Rodapé: pagamento à esquerda, conta à direita ---- */
+.apr-rodape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+  flex: 0 0 auto;
+}
+
+.apr-rodape-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
+  gap: var(--t20g-e4);
+  align-items: start;
+  padding: var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+.apr-pagamento { display: flex; flex-direction: column; gap: var(--t20g-e2); min-width: 0; }
+
+.apr-rodape-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--t20g-e2) var(--t20g-e4);
+}
+
+.apr-rodape-linha label {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  font-size: 0.75rem;
+  color: var(--t20g-ink-2);
+}
+
+.hayd-ui .apr-rodape input[type="number"] { width: 64px; }
+
+/* A conta: pares rótulo/valor, com o total separado por uma régua e maior.
+   Em duas colunas espremidas ninguém achava o número que importa. */
+.apr-preview {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.apr-preview div { display: flex; justify-content: space-between; gap: var(--t20g-e4); }
+.apr-preview span { color: var(--t20g-ink-3); }
+.apr-preview b { color: var(--t20g-ink-2); font-weight: 600; }
+
+.apr-p-total-linha {
+  margin-top: var(--t20g-e2);
+  padding-top: var(--t20g-e2);
+  border-top: 1px solid var(--t20g-line);
+  font-size: 0.9375rem;
+}
+
+.apr-p-total-linha span { color: var(--t20g-ink-2); font-weight: 600; }
+.apr-p-total-linha b { color: var(--t20g-ink); font-weight: 700; }
+.apr-p-total.too-expensive { color: var(--t20g-perigo); }
+
+.apr-alerta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 3px;
+  border-radius: 50%;
+  background: var(--t20g-aviso);
+  color: #1a1208;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.625rem;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+/* Ação principal da janela: uma, larga, no fim do caminho de leitura. */
+.hayd-ui .apr-confirmar {
+  width: 100%;
+  min-height: 34px;
+  background: var(--t20g-accent);
+  border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
+  color: var(--t20g-ink-sobre-accent);
+  font-weight: 600;
+}
+
+.hayd-ui .apr-confirmar:hover:not(:disabled) {
+  background: var(--t20g-accent-forte);
+  color: var(--t20g-ink-sobre-accent);
+}
+
+.hayd-ui .apr-confirmar > i { color: inherit; opacity: 1; }
+.hayd-ui .apr-confirmar:disabled { opacity: 0.45; }
+
+/* Janela estreita: pagamento e conta deixam de dividir a linha. */
+@media (max-width: 640px) {
+  .apr-rodape-colunas { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ── Configurações (fontes da loja) ──────────────────────── */
 .t20-loja-settings-form .settings-section { margin-bottom: 10px; }
@@ -880,3 +1229,60 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
    1px proporcional para manter o tamanho de antes. */
 .chat-message .t20l-coin { font-size: calc(0.92em + 1px); }
 .chat-message .t20l-coin i { font-size: calc(0.72em - 0.72px); }
+
+/* ── Itens Superiores: tokens seguindo o tema da Loja ────
+   A janela usa a base visual da família, mas a Loja tem temas próprios
+   (o "tenda", em pergaminho e tinta marrom, e o escuro). Sem este mapa,
+   a base entrava com a rampa dela — cinza-frio — dentro de uma janela de
+   pergaminho, e o resultado era uma janela com duas paletas brigando.
+
+   Aqui os tokens passam a apontar para as variáveis do tema, então a
+   ESTRUTURA é a da família (zonas, hierarquia, espaçamento) e a COR é a
+   da Loja, seja ela qual for. */
+
+.t20-loja-aprimorar.tema-tenda,
+.t20-loja-dialogo.tema-tenda {
+  --t20g-s0: var(--t-creme);
+  --t20g-s1: color-mix(in oklab, var(--t-creme) 88%, var(--t-creme-fraco));
+  --t20g-s2: color-mix(in oklab, var(--t-creme) 72%, var(--t-creme-fraco));
+  --t20g-s3: color-mix(in oklab, var(--t-creme) 58%, var(--t-creme-fraco));
+  --t20g-s4: var(--t-creme-fraco);
+  --t20g-line: color-mix(in oklab, var(--t-tinta) 22%, transparent);
+  --t20g-line-forte: color-mix(in oklab, var(--t-tinta) 38%, transparent);
+  --t20g-ink: var(--t-tinta);
+  --t20g-ink-2: var(--t-tinta-fraca);
+  --t20g-ink-3: color-mix(in oklab, var(--t-tinta-fraca) 75%, var(--t-creme));
+  --t20g-accent: var(--t-latao-escuro);
+  --t20g-accent-forte: var(--t-latao);
+  --t20g-accent-fundo: color-mix(in oklab, var(--t-latao) 24%, transparent);
+  --t20g-accent-linha: color-mix(in oklab, var(--t-latao-escuro) 55%, transparent);
+  --t20g-ink-sobre-accent: var(--t-creme);
+  --t20g-perigo: var(--t-carmim);
+  --t20g-aviso: var(--t-latao-escuro);
+  --t20g-sombra1: 0 1px 2px color-mix(in oklab, var(--t-escuro) 22%, transparent);
+  --t20g-sombra2: 0 6px 16px -8px color-mix(in oklab, var(--t-escuro) 35%, transparent);
+}
+
+/* No tema de pergaminho as três cores de catálogo precisam escurecer para
+   sobreviver ao fundo claro: as originais foram escolhidas para fundo
+   escuro e sumiam aqui. */
+.t20-loja-aprimorar.tema-tenda .apr-grupo-superior { --apr-cor: #4a5e78; }
+.t20-loja-aprimorar.tema-tenda .apr-grupo-material { --apr-cor: #8a6a22; }
+.t20-loja-aprimorar.tema-tenda .apr-grupo-encanto  { --apr-cor: #5b3f96; }
+
+/* A janela já traz o fundo de pergaminho; o corpo não pinta por cima. */
+.t20-loja-aprimorar.tema-tenda .apr-root { background: transparent; }
+
+/* O corpo do diálogo vira uma folha de pergaminho sobre a madeira — é a
+   mesma linguagem dos painéis da Loja, e é o que permite usar a tinta
+   escura do tema como cor de texto. */
+.t20-loja-dialogo.tema-tenda .dialog-content {
+  margin: var(--t20g-e3);
+  padding: var(--t20g-e4);
+  background: var(--t20g-s0);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r2);
+  color: var(--t20g-ink);
+}
+.t20-loja-dialogo.tema-tenda .dialog-content p { color: var(--t20g-ink-2); }
+.t20-loja-dialogo.tema-tenda .dialog-buttons { margin: 0 var(--t20g-e3) var(--t20g-e3); }
