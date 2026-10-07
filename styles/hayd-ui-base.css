@@ -1040,3 +1040,33 @@
   --t20g-sombra1: 0 1px 2px rgb(10 7 16 / 45%);
   --t20g-sombra2: 0 6px 16px -8px rgb(10 7 16 / 75%);
 }
+
+/* ══ Diálogo v1 ═══════════════════════════════════════════════════════════
+   O `Dialog` clássico mede a altura no render e fixa ali. Qualquer coisa
+   que o nosso CSS acrescente depois — espaçamento do rodapé, fonte maior,
+   borda — passa a sobrar para fora, e o que some é sempre a última coisa:
+   os botões.
+
+   Duas defesas: a janela não corta o que transborda (abaixo) e o marcador
+   pede uma re-medição no quadro seguinte (ver scripts/ui-base.mjs). */
+
+:is(.hayd-ui, .t20g-ui).dialog .window-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+  overflow: visible;
+}
+
+:is(.hayd-ui, .t20g-ui).dialog .dialog-content {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+/* Sem régua nem margem extra no rodapé do diálogo v1: é altura que a
+   janela não reservou. A separação vem do espaçamento do flex acima. */
+:is(.hayd-ui, .t20g-ui).dialog .dialog-buttons {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  flex: 0 0 auto;
+}

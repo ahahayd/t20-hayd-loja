@@ -52,6 +52,16 @@ function marcar(app, elemento) {
   // utilitárias seguem o padrão escuro da família, que é o que a pessoa já
   // conhece das outras janelas dos módulos.
   raiz.classList.add('hayd-ui-escuro');
+  // Diálogo v1 mede a altura no render, ANTES de o nosso CSS entrar: o
+  // conteúdo cresce depois e o rodapé fica cortado pela metade. Uma
+  // re-medição no quadro seguinte resolve. Só para DIÁLOGO: janela com
+  // altura fixa por projeto (a de Itens Superiores, por exemplo) perderia
+  // o tamanho que o autor escolheu.
+  if (ehDialogo(app) && typeof app.setPosition === 'function') {
+    requestAnimationFrame(() => {
+      try { app.setPosition({ height: 'auto' }); } catch (_err) { /* janela já fechada */ }
+    });
+  }
 }
 
 Hooks.on('renderApplicationV2', marcar);
