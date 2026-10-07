@@ -1070,3 +1070,37 @@
   border-top: 0;
   flex: 0 0 auto;
 }
+
+/* ══ Lista aberta do <select> ═════════════════════════════════════════════
+   O popup do select é desenhado pelo sistema operacional, fora da página:
+   ele herda a COR DO TEXTO do campo, mas não o fundo. Com o texto claro da
+   rampa escura e o fundo branco do sistema, a lista aberta ficava branco
+   no branco — dava para ver só a opção sob o cursor.
+
+   As cores aqui precisam ser OPACAS: o popup não compõe transparência com
+   nada, e uma cor com alfa vira branco de novo. */
+
+:is(.hayd-ui, .t20g-ui) select option,
+:is(.hayd-ui, .t20g-ui) select optgroup {
+  background-color: var(--t20g-s1);
+  color: var(--t20g-ink);
+}
+
+/* A opção já escolhida precisa de contraste próprio: alguns sistemas
+   pintam o item marcado com a cor de seleção deles e ignoram o resto. */
+:is(.hayd-ui, .t20g-ui) select option:checked,
+:is(.hayd-ui, .t20g-ui) select option:hover {
+  background-color: var(--t20g-s3);
+  color: var(--t20g-ink);
+}
+
+:is(.hayd-ui, .t20g-ui) select option:disabled {
+  color: var(--t20g-ink-3);
+}
+
+/* O mesmo vale para o <select multiple>, que desenha a lista DENTRO da
+   página — aí a transparência compõe e o fundo do campo já serve. */
+:is(.hayd-ui, .t20g-ui) select[multiple] {
+  background-color: var(--t20g-s2);
+  color: var(--t20g-ink);
+}
