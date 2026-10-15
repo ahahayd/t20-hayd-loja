@@ -356,7 +356,7 @@ Hooks.once('init', () => {
     name: 'Tema visual da loja',
     hint: 'Aparência das janelas da loja. O botão "Alterar tema" no cabeçalho da loja muda isto sem passar por aqui. "T20 Hayd UI" exige o módulo t20-hayd-ui ativo no mundo.',
     scope: 'world',
-    config: true,
+    config: false,
     type: String,
     choices: Object.fromEntries(Object.entries(TEMAS).map(([k, t]) => [k, t.rotulo])),
     default: temaPadrao(),
@@ -371,7 +371,7 @@ Hooks.once('init', () => {
     name: 'Lampião da loja',
     hint: 'O lampião pendurado no canto da janela, no tema Tenda Medieval. O botão "Alterar tema" no cabeçalho da loja também liga e desliga isto.',
     scope: 'world',
-    config: true,
+    config: false,
     type: Boolean,
     default: true,
     onChange: () => rerenderJanelasLoja(),
@@ -632,8 +632,10 @@ Hooks.on('updateActor', (actor, data, options, userId) => {
   const monitorPlayers = game.settings.get(MODULE_ID, 'monitorPlayerMoneyChanges');
   if (!monitorAll && !monitorPlayers) return;
 
+  /* O "Gastar/Receber" da Ficha Hayd (t20-hayd-ui) é sempre um ajuste manual
+   * de moedas, mesmo quando é o mestre quem clica: conta como de jogador. */
   const user = game.users.get(userId);
-  if (!monitorAll && user?.isGM) return;
+  if (!monitorAll && user?.isGM && !options?.t20haydAjusteManual) return;
 
   const previous = moneySnapshots.get(actor.id);
   moneySnapshots.delete(actor.id);

@@ -953,47 +953,31 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 
 /* Janela estreita: ver o bloco de responsividade no fim do arquivo. */
 
-/* ── Configurações (fontes da loja) ──────────────────────── */
-.t20-loja-settings-form .settings-section { margin-bottom: 10px; }
-.t20-loja-settings-form h3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.35);
-  padding-bottom: 3px;
+/* ── Configurações (fontes da loja) — mesmo padrão da tela de fontes do GMTools ── */
+.hayd-ui.t20-loja-settings .t20g-cf { display: flex; flex-direction: column; gap: var(--t20g-e4); }
+.hayd-ui .t20g-cf-intro { margin: 0; }
+.hayd-ui .t20g-cf-grupo { display: flex; flex-direction: column; gap: var(--t20g-e2); }
+.hayd-ui.t20-loja-settings h3.t20g-rotulo { display: flex; align-items: center; gap: var(--t20g-e2); margin: 0; border: 0; padding: 0; }
+.hayd-ui .t20g-cf-dica { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.hayd-ui .t20g-cf-add { display: flex; align-items: center; gap: var(--t20g-e2); }
+.hayd-ui .t20g-cf-add > .t20g-campo { flex: 1 1 auto; min-width: 0; }
+.hayd-ui .t20g-cf-add > .t20g-btn { flex: 0 0 auto; }
+.hayd-ui .t20g-cf-lista { display: flex; flex-direction: column; gap: 3px; }
+.hayd-ui .t20g-cf-linha {
+  display: flex; align-items: center; gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-s1); border: 1px solid var(--t20g-line); border-radius: var(--t20g-r1);
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao);
 }
-.t20-loja-settings-form .hint { font-size: 0.85em; opacity: 0.8; }
-.t20-loja-settings-form .setting-row.add-row {
-  display: flex;
-  gap: 6px;
-  margin: 6px 0;
-}
-.t20-loja-settings-form .pack-select-dropdown,
-.t20-loja-settings-form .uuid-input { flex: 1; }
-.t20-loja-settings-form .btn-add { width: auto; flex: 0 0 auto; padding: 2px 10px; transition: background 0.15s; }
-.configured-list { display: flex; flex-direction: column; gap: 3px; }
-.configured-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 6px;
-  border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 3px;
-}
-.configured-row.invalid { opacity: 0.6; }
-.configured-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.uuid-preview { display: block; font-size: 0.75em; opacity: 0.65; }
-.configured-row .btn-remove {
-  width: 26px;
-  height: 24px;
-  padding: 0;
-  line-height: 1;
-  flex: 0 0 auto;
-  transition: background 0.15s, color 0.15s;
-}
-.btn-clear { width: auto; margin-top: 4px; padding: 2px 10px; transition: border-color 0.15s, color 0.15s; }
-.empty-list { font-size: 0.85em; opacity: 0.7; font-style: italic; }
-.settings-footer { border-top: 1px solid rgba(128, 128, 128, 0.25); padding-top: 6px; }
+.hayd-ui .t20g-cf-linha:hover { background: var(--t20g-s2); }
+.hayd-ui .t20g-cf-linha.invalid { border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent); }
+.hayd-ui .t20g-cf-linha.invalid b i { color: var(--t20g-perigo); }
+.hayd-ui .t20g-cf-nome { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; line-height: 1.25; }
+.hayd-ui .t20g-cf-nome > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hayd-ui .t20g-cf-nome b { font-weight: 500; }
+.hayd-ui .t20g-cf-nome b i { color: var(--t20g-ink-3); margin-right: 2px; }
+.hayd-ui .t20g-cf-vazio { padding: var(--t20g-e2) var(--t20g-e3); border: 1px dashed var(--t20g-line); border-radius: var(--t20g-r1); }
+.hayd-ui.t20-loja-settings .t20g-cf-rodape { display: flex; align-items: center; gap: var(--t20g-e2); }
 
 /* ── Mensagens de chat ───────────────────────────────────── */
 .t20-loja-message ul {

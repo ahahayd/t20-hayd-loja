@@ -3,7 +3,7 @@
  * Permite adicionar/remover compêndios extras e itens individuais por UUID.
  */
 
-import { MODULE_ID, aplicarTemaLoja } from './main.js';
+import { MODULE_ID } from './main.js';
 import { warmShopItemsCache } from './shop-app.js';
 
 export class ShopSettingsApplication extends FormApplication {
@@ -13,7 +13,7 @@ export class ShopSettingsApplication extends FormApplication {
       id        : 't20-loja-settings',
       title     : 'Configurações da Loja — Fontes de Itens',
       template: `modules/t20-hayd-loja/templates/shop-settings.hbs`,
-      width     : 600,
+      width     : 560,
       height    : 'auto',
       resizable : false,
       classes   : ['t20-loja-settings'],
@@ -40,7 +40,7 @@ export class ShopSettingsApplication extends FormApplication {
       const pack = game.packs.get(id);
       return {
         id,
-        label: pack ? `${pack.metadata.label} [${id}]` : `⚠ Não encontrado: ${id}`,
+        nome : pack ? pack.metadata.label : 'Não encontrado',
         valid: !!pack,
       };
     });
@@ -72,7 +72,7 @@ export class ShopSettingsApplication extends FormApplication {
   /* ── Listeners ──────────────────────────────── */
   activateListeners(html) {
     super.activateListeners(html);
-    aplicarTemaLoja(this);
+    // Janela de configuração segue o estilo padrão do Foundry, sem tema da loja.
 
     // ── Compêndios ──
     // Adicionar compêndio selecionado

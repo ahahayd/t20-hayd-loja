@@ -1,88 +1,59 @@
-{{!-- templates/shop-settings.hbs — Configurações das fontes da loja --}}
-<form class="t20-loja-settings-form">
+{{!-- templates/shop-settings.hbs — Configurações das fontes da loja (mesmo padrão da tela de fontes do GMTools) --}}
+<form class="t20-loja-settings-form t20g-cf">
+  <p class="t20g-apoio t20g-cf-intro">
+    Escolha de onde a loja tira itens além dos compêndios padrão do sistema. As demais opções
+    (compêndios do sistema, itens do mundo) ficam em <b>Configurações do Módulo</b>.
+  </p>
 
-  <section class="settings-section">
-    <h3><i class="fas fa-book"></i> Compêndios Adicionais</h3>
-    <p class="hint">
-      Selecione compêndios de <strong>Itens</strong> que deseja incluir na loja além dos compêndios padrão do sistema.
-    </p>
-
-    <div class="setting-row add-row">
-      <select id="pack-select" class="pack-select-dropdown">
-        <option value="">— Selecione um compêndio —</option>
+  <section class="t20g-cf-grupo">
+    <h3 class="t20g-rotulo"><i class="fa-solid fa-book"></i> Compêndios adicionais</h3>
+    <div class="t20g-cf-add">
+      <select id="pack-select" class="t20g-campo">
+        <option value="">Selecione um compêndio…</option>
         {{#each availablePacks}}
         <option value="{{id}}" {{#if selected}}disabled{{/if}}>{{label}}</option>
         {{/each}}
       </select>
-      <button type="button" id="btn-add-pack" class="btn-add">
-        <i class="fas fa-plus"></i> Adicionar
-      </button>
+      <button type="button" id="btn-add-pack" class="t20g-btn t20g-btn--primario"><i class="fa-solid fa-plus"></i> Adicionar</button>
     </div>
-
-    <div class="configured-list">
-      {{#if configuredPacks.length}}
-        {{#each configuredPacks}}
-        <div class="configured-row {{#unless valid}}invalid{{/unless}}">
-          <span class="configured-label" title="{{id}}">{{label}}</span>
-          <button type="button" class="btn-remove btn-remove-pack" data-id="{{id}}" title="Remover">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-        {{/each}}
-        <button type="button" id="btn-clear-packs" class="btn-clear">
-          <i class="fas fa-trash"></i> Remover todos os compêndios
-        </button>
+    <div class="t20g-cf-lista">
+      {{#each configuredPacks}}
+      <div class="t20g-cf-linha {{#unless valid}}invalid{{/unless}}">
+        <span class="t20g-cf-nome" title="{{id}}">
+          <b>{{nome}}</b>
+          <span class="t20g-apoio">{{id}}</span>
+        </span>
+        <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma btn-remove-pack" data-id="{{id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></button>
+      </div>
       {{else}}
-        <p class="empty-list">Nenhum compêndio adicional configurado.</p>
-      {{/if}}
+      <p class="t20g-apoio t20g-cf-vazio">Nenhum compêndio adicional.</p>
+      {{/each}}
     </div>
   </section>
 
-  <hr>
-
-  <section class="settings-section">
-    <h3><i class="fas fa-tag"></i> Itens Individuais por UUID</h3>
-    <p class="hint">
-      Cole o UUID de um item específico (visível ao segurar <kbd>Alt</kbd> ao clicar num item).
-      Funciona com itens do mundo ou de qualquer compêndio.
-    </p>
-
-    <div class="setting-row add-row">
-      <input type="text" id="item-uuid-input" placeholder="Ex: Compendium.tormenta20.itens.Item.abc123…"
-             class="uuid-input">
-      <button type="button" id="btn-add-item" class="btn-add btn-add-uuid">
-        <i class="fas fa-plus"></i> Adicionar
-      </button>
+  <section class="t20g-cf-grupo">
+    <h3 class="t20g-rotulo"><i class="fa-solid fa-tag"></i> Itens individuais <span class="t20g-cf-dica">— por UUID, do mundo ou de compêndio</span></h3>
+    <div class="t20g-cf-add">
+      <input type="text" id="item-uuid-input" class="t20g-campo" placeholder="Compendium.tormenta20.itens.Item.abc123…">
+      <button type="button" id="btn-add-item" class="t20g-btn t20g-btn--primario"><i class="fa-solid fa-plus"></i> Adicionar</button>
     </div>
-
-    <div class="configured-list">
-      {{#if configuredItems.length}}
-        {{#each configuredItems}}
-        <div class="configured-row {{#unless valid}}invalid{{/unless}}">
-          <i class="fas {{#if valid}}fa-cube{{else}}fa-exclamation-triangle{{/if}}"></i>
-          <span class="configured-label" title="{{uuid}}">
-            {{#if valid}}{{name}}{{else}}⚠ Não encontrado{{/if}}
-            <small class="uuid-preview">{{uuid}}</small>
-          </span>
-          <button type="button" class="btn-remove btn-remove-item" data-uuid="{{uuid}}" title="Remover">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        {{/each}}
-        <button type="button" id="btn-clear-items" class="btn-clear">
-          <i class="fas fa-trash"></i> Remover todos os itens individuais
-        </button>
+    <div class="t20g-cf-lista">
+      {{#each configuredItems}}
+      <div class="t20g-cf-linha {{#unless valid}}invalid{{/unless}}">
+        <span class="t20g-cf-nome" title="{{uuid}}">
+          <b>{{#if valid}}<i class="fa-solid fa-cube"></i> {{name}}{{else}}<i class="fa-solid fa-triangle-exclamation"></i> Não encontrado{{/if}}</b>
+          <span class="t20g-apoio">{{uuid}}</span>
+        </span>
+        <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma btn-remove-item" data-uuid="{{uuid}}" data-tooltip="Remover"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       {{else}}
-        <p class="empty-list">Nenhum item individual configurado.</p>
-      {{/if}}
+      <p class="t20g-apoio t20g-cf-vazio">Nenhum item individual.</p>
+      {{/each}}
     </div>
   </section>
 
-  <div class="settings-footer">
-    <p class="hint"><i class="fas fa-info-circle"></i>
-      As outras opções (incluir compêndios do sistema, itens do mundo, etc.) estão nas
-      <strong>Configurações do Módulo</strong> no menu principal do FoundryVTT.
-    </p>
-  </div>
-
+  <footer class="form-footer t20g-cf-rodape">
+    <button type="button" id="btn-clear-packs" class="t20g-btn t20g-btn--fantasma" {{#unless configuredPacks.length}}disabled{{/unless}}><i class="fa-solid fa-trash"></i> Limpar compêndios</button>
+    <button type="button" id="btn-clear-items" class="t20g-btn t20g-btn--fantasma" {{#unless configuredItems.length}}disabled{{/unless}}><i class="fa-solid fa-trash"></i> Limpar itens</button>
+  </footer>
 </form>
