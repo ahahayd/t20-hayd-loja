@@ -70,8 +70,6 @@ Você pode apoiar meu trabalho pelo Ko-fi:
 
 [![Apoie no Ko-fi](https://img.shields.io/badge/Apoie_no_Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/haydgi)
 
-Ao apoiar pelo Ko-fi, você também pode deixar uma mensagem com um pedido ou sugestão de automação para Foundry VTT que gostaria de ver. Esses pedidos podem servir de inspiração para futuras funcionalidades, automações ou módulos.
-
 ### 🇧🇷 Pix
 
 Se preferir, você também pode apoiar diretamente via Pix.
@@ -84,11 +82,13 @@ Se preferir, você também pode apoiar diretamente via Pix.
   <img src="assets/qrcode.png" alt="QR Code Pix" width="220">
 </p>
 
-### 🛠️ Comissões para Foundry VTT
+### 🛠️ Comissões
 
-Também aceito comissões para desenvolvimento no Foundry VTT, incluindo a implementação de **módulos completos de aventuras**, respeitando os direitos e licenças dos materiais utilizados, com cenas, atores, itens, diários, automações e outros conteúdos necessários para deixar a aventura pronta para uso no Foundry, além de módulos específicos para Tormenta20 e outros sistemas.
+Aceito comissões para desenvolvimento de **módulos personalizados para Foundry VTT**, para Tormenta20 e vários outros sistemas.
 
-Se tiver interesse em contratar uma comissão, você pode entrar em contato comigo pelo Discord `xddyahaha` para conversarmos sobre o projeto e seu escopo.
+Também aceito comissões de **mesas de RPG**, conduzindo sua campanha ou one-shot como mestre.
+
+Se tiver interesse em contratar uma comissão, ou quiser mandar um pedido ou sugestão de funcionalidade, fale comigo direto pelo Discord `xddyahaha`.
 
 <p align="center">
   <sub>Todo apoio é opcional e ajuda a continuar desenvolvendo e mantendo meus módulos para Foundry VTT. ❤️</sub>
