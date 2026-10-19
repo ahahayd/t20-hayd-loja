@@ -10,8 +10,8 @@ Loja integrada para o sistema **Tormenta20** no FoundryVTT: um botão na ficha d
 
 ## Requisitos
 
-- FoundryVTT **v13**
-- Sistema **Tormenta20**
+- FoundryVTT **v13** ou **v14**
+- Sistema **Tormenta20** (1.5 no Foundry v13, 1.6 no Foundry v14)
 - *(Opcional)* **t20-hayd-ui** — a loja herda o tema e a cor de destaque quando ativo
 
 ## Instalação

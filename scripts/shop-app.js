@@ -15,6 +15,7 @@
 import { MODULE_ID, aplicarTemaLoja, botoesCabecalhoComTema, pisoDaJanela, observarLargura, lampiaoLigado } from './main.js';
 import { AprimorarApplication } from './aprimorar-app.js';
 import { agitarLamparina } from './lamparina.mjs';
+import { ehV14 } from './versao.mjs';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -103,21 +104,38 @@ function spellConsumablePrice(custoPM) {
  * ser aplicados mais de uma vez) e o ajuste manual de custo em PM, se
  * houver. Usado para deixar isso registrado na descrição da poção.
  */
+/** v14: o que um efeito de uso faz — a descrição (sem HTML) ou, sem ela, o título. */
+function textoDoEfeito(effect) {
+  const div = document.createElement('div');
+  div.innerHTML = effect?.description ?? '';
+  const texto = div.textContent.replace(/\s+/g, ' ').trim();
+  return texto || effect?.name || '';
+}
+
 function describeAprimoramentosHtml(tempItem, configuration) {
   const aprs = configuration?.aprs ?? {};
-  const effects = tempItem?.validOnUseEffects ?? [];
   const linhas = [];
+
+  // v14 (Tormenta20 1.6): a janela mostra `applicableOnUseEffects` (item,
+  // outros itens e ator), o "aumenta" mora em system.abilityUse e o título
+  // do efeito é curto (o nome da magia) — o que ele faz está na descrição.
+  // v13 (Tormenta20 1.5): `validOnUseEffects`, flag "aumenta" e o próprio
+  // título já descreve o aprimoramento.
+  const v14 = ehV14();
+  const effects = (v14 ? tempItem?.applicableOnUseEffects : tempItem?.validOnUseEffects) ?? [];
+  const aumenta = effect => (v14 ? effect.system?.abilityUse?.aumenta : effect.getFlag('tormenta20', 'aumenta'));
+  const texto = effect => (v14 ? foundry.utils.escapeHTML(textoDoEfeito(effect)) : effect.name);
 
   for (const [id, entry] of Object.entries(aprs)) {
     if (!entry) continue;
     const effect = effects.find(ef => ef.id === id);
     if (!effect) continue;
-    if (effect.getFlag('tormenta20', 'aumenta')) {
+    if (aumenta(effect)) {
       const qty = Number(entry.aplica) || 0;
       if (qty <= 0) continue;
-      linhas.push(`${effect.name}${qty > 1 ? ` ×${qty}` : ''}`);
+      linhas.push(`${texto(effect)}${qty > 1 ? ` ×${qty}` : ''}`);
     } else if (entry.aplica) {
-      linhas.push(effect.name);
+      linhas.push(texto(effect));
     }
   }
 
@@ -1160,6 +1178,13 @@ export class ShopApplication extends Application {
     const itemData = sourceDoc.toObject();
     delete itemData._id;
     const tempItem = new CONFIG.Item.documentClass(itemData, { parent: this.actor });
+    // v14 (Tormenta20 1.6): a janela não procura os aprimoramentos sozinha,
+    // lê a lista que ItemT20#roll prepara antes de abri-la. No v13 ela mesma
+    // monta a lista.
+    if (ehV14()) {
+      tempItem.prepareFinalAttributes();
+      tempItem.applicableOnUseEffects = tempItem._allApplicableOnUseEffects();
+    }
 
     const configuration = await AbilityUseDialogCls.create(tempItem);
     if (!configuration) return null;

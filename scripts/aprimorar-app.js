@@ -24,6 +24,7 @@ import {
   getShopItems, debitarCarteira, cartaoLoja, linhaCartao, moedasChips, atorUsaPlatina,
   precoDisplay, linhaPagamento, getChatRecipients, toCobre,
 } from './shop-app.js';
+import { ehV14 } from './versao.mjs';
 
 const ITENS_ID = 't20-hayd-itens';
 
@@ -110,6 +111,67 @@ function elegivel(doc, catalogo) {
   return doc.type === 'arma' || doc.type === 'equipamento' || ehMunicao(doc);
 }
 
+/* ── Melhorias nativas (só v14 / Tormenta20 1.6) ──────────────
+   No 1.6 melhorias, materiais e encantos viraram efeitos do compêndio do
+   mundo "Melhorias e Encantos", listados em CONFIG.upgradeEffects. Um item
+   guarda os uuids em system.upgrades.<categoria> (Set) e o próprio sistema
+   cria/apaga os efeitos quando a lista muda. O preço não é tocado pelo
+   sistema. No v13 nada disto existe: as entradas vão só para a descrição. */
+
+const CATEGORIAS_NATIVAS = { melhoria: 'improvement', material: 'material', encanto: 'enchantment' };
+
+function slug(texto) {
+  return String(texto ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function upgradesNativosDisponiveis() {
+  return ehV14() && Array.isArray(CONFIG.upgradeEffects) && CONFIG.upgradeEffects.length > 0;
+}
+
+/**
+ * Tipo do item no vocabulário das melhorias nativas. Os itens do
+ * compêndio vêm com `upgrades.itemType` vazio, então ele é deduzido.
+ * Munição fica de fora: nenhuma melhoria nativa é de munição.
+ */
+function tipoNativoDoItem(doc) {
+  const declarados = [...(doc.system?.upgrades?.itemType ?? [])];
+  if (declarados.length) return declarados;
+  if (doc.type === 'arma') return ['weapon'];
+  if (doc.type !== 'equipamento') return [];
+  const tipo = doc.system?.tipo;
+  if (tipo === 'escudo') return ['shield'];
+  if (tipo === 'leve' || tipo === 'pesada') return ['armor'];
+  if (tipo === 'esoterico') return ['esoteric'];
+  return [];
+}
+
+/** Melhoria nativa com o nome desta entrada, da categoria certa e que sirva no item. */
+function upgradeNativo(entrada, doc) {
+  const categoria = CATEGORIAS_NATIVAS[entrada.tipo];
+  const tipos = tipoNativoDoItem(doc);
+  if (!categoria || !tipos.length) return null;
+  const alvo = slug(entrada.nome);
+  return (CONFIG.upgradeEffects ?? []).find(u => u.type === categoria
+    && slug(u.name) === alvo
+    && [...(u.itemType ?? [])].some(t => tipos.includes(t))) ?? null;
+}
+
+/** Quantas melhorias nativas o item tem e os nomes delas (em slug). */
+function nomesNativosDoItem(doc) {
+  const up = doc.system?.upgrades;
+  if (!up) return { m: 0, e: 0, nomes: new Set() };
+  const uuids = cat => [...(up[cat] ?? [])];
+  const porUuid = new Map((CONFIG.upgradeEffects ?? []).map(u => [u.uuid, u.name]));
+  const nomes = new Set([...uuids('improvement'), ...uuids('material'), ...uuids('enchantment')]
+    .map(u => porUuid.get(u)).filter(Boolean).map(slug));
+  return {
+    m: uuids('improvement').length + uuids('material').length,
+    e: uuids('enchantment').length,
+    nomes,
+  };
+}
+
 /**
  * Quantas melhorias e encantos o item já tem, pelas fontes conhecidas:
  * flags do t20-hayd-itens, flag desta loja e os campos nativos do sistema.
@@ -133,10 +195,20 @@ function detectarExistentes(doc) {
     fontes.push('loja');
   }
 
+  // Campos do sistema: listas de uuids no v14, campos de texto no v13.
+  let nomesNativos = new Set();
   const up = doc.system?.upgrades;
   if (up) {
-    const nm = ['melhoria1', 'melhoria2', 'melhoria3', 'melhoria4', 'material'].filter(k => up[k]).length;
-    const ne = ['encanto1', 'encanto2', 'encanto3'].filter(k => up[k]).length;
+    let nm, ne;
+    if (ehV14()) {
+      const nativos = nomesNativosDoItem(doc);
+      nm = nativos.m;
+      ne = nativos.e;
+      nomesNativos = nativos.nomes;
+    } else {
+      nm = ['melhoria1', 'melhoria2', 'melhoria3', 'melhoria4', 'material'].filter(k => up[k]).length;
+      ne = ['encanto1', 'encanto2', 'encanto3'].filter(k => up[k]).length;
+    }
     if (nm || ne) {
       m = Math.max(m, nm);
       e = Math.max(e, ne);
@@ -148,7 +220,7 @@ function detectarExistentes(doc) {
     ...(fi?.melhorias ?? []), ...(fi?.encantos ?? []), ...(fi?.materiais ?? []),
   ].map(r => r.key));
 
-  return { m, e, fontes, chaves };
+  return { m, e, fontes, chaves, nomesNativos };
 }
 
 /** Bloco de descrição com as entradas aplicadas (sem o t20-hayd-itens). */
@@ -252,7 +324,7 @@ export class AprimorarApplication extends Application {
       .filter(([key, def]) => serve(def) || this._sel.has(key))
       .map(([key, def]) => ({
         key, tipo, nome: def.nome, beneficio: def.beneficio ?? '', fonte: def.fonte ?? '',
-        especial: !!def.especial, possui: detec.chaves.has(key), marcado: this._sel.has(key),
+        especial: !!def.especial, possui: detec.chaves.has(key) || detec.nomesNativos.has(slug(def.nome)), marcado: this._sel.has(key),
       }))
       .sort((a, b) => a.nome.localeCompare(b.nome));
 
@@ -265,7 +337,7 @@ export class AprimorarApplication extends Application {
             key, tipo: 'material', nome: def.nome, fonte: def.fonte ?? '',
             beneficio: catalogo.beneficioDaVariante(def, variante),
             custo: catalogo.precoDaVariante(def, variante),
-            possui: detec.chaves.has(key), marcado: this._sel.has(key),
+            possui: detec.chaves.has(key) || detec.nomesNativos.has(slug(def.nome)), marcado: this._sel.has(key),
           };
         })
         .sort((a, b) => a.nome.localeCompare(b.nome))
@@ -461,7 +533,9 @@ export class AprimorarApplication extends Application {
 
     const modoApi = data.comApi
       ? 'Entram no item pelo t20-hayd-itens e ficam listadas na descrição.'
-      : 't20-hayd-itens inativo: as entradas ficam listadas na descrição e o preço é ajustado.';
+      : upgradesNativosDisponiveis()
+        ? 't20-hayd-itens inativo: as entradas que o sistema tem entram como melhorias nativas do item; todas ficam listadas na descrição e o preço é ajustado.'
+        : 't20-hayd-itens inativo: as entradas ficam listadas na descrição e o preço é ajustado.';
 
     return `
       <header class="apr-cabecalho">
@@ -762,10 +836,26 @@ export class AprimorarApplication extends Application {
     await this._gravarRegistro(this.actor.items.get(item.id) ?? item, calc, { descricao: true });
   }
 
-  /** Sem o t20-hayd-itens: preço ajustado e entradas na descrição. */
+  /**
+   * Sem o t20-hayd-itens: preço ajustado e entradas na descrição. No v14,
+   * as que existem como melhoria nativa do Tormenta20 1.6 entram também na
+   * lista do sistema, que cria os efeitos de verdade no item.
+   */
   async _aplicarNaDescricao(item, calc) {
-    await item.update({ 'system.preco': calc.precoFinal });
-    await this._gravarRegistro(item, calc, { descricao: true });
+    const update = { 'system.preco': calc.precoFinal };
+    if (upgradesNativosDisponiveis() && item.system?.upgrades) {
+      const listas = {};
+      for (const s of calc.sel) {
+        const nativo = upgradeNativo(s, item);
+        if (!nativo) continue;
+        const cat = CATEGORIAS_NATIVAS[s.tipo];
+        listas[cat] ??= new Set(item.system.upgrades[cat] ?? []);
+        listas[cat].add(nativo.uuid);
+      }
+      for (const [cat, uuids] of Object.entries(listas)) update[`system.upgrades.${cat}`] = [...uuids];
+    }
+    await item.update(update);
+    await this._gravarRegistro(this.actor.items.get(item.id) ?? item, calc, { descricao: true });
   }
 
   /** Flag da loja (para detectar depois) e, opcionalmente, bloco na descrição. */
