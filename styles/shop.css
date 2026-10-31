@@ -970,6 +970,10 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
   transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao);
 }
 .hayd-ui .t20g-cf-linha:hover { background: var(--t20g-s2); }
+.hayd-ui .t20g-cf-pack { cursor: pointer; }
+.hayd-ui .t20g-cf-pack:has(input:checked) { border-color: var(--t20g-accent-linha); }
+.hayd-ui .t20g-cf-pack input { flex: 0 0 auto; margin: 0; accent-color: var(--t20g-accent); }
+.hayd-ui .t20g-cf-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
 .hayd-ui .t20g-cf-linha.invalid { border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent); }
 .hayd-ui .t20g-cf-linha.invalid b i { color: var(--t20g-perigo); }
 .hayd-ui .t20g-cf-nome { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; line-height: 1.25; }

@@ -340,6 +340,15 @@ Hooks.once('init', () => {
     default: []
   });
 
+  // Compêndios de módulos conhecidos que já entraram sozinhos na lista acima.
+  // Quem tira um da lista não o vê voltar; compêndio novo do módulo entra.
+  game.settings.register(MODULE_ID, 'autoCompendiums', {
+    scope: 'world',
+    config: false,
+    type: Array,
+    default: []
+  });
+
   // Lista de UUIDs de itens individuais extras
   game.settings.register(MODULE_ID, 'extraItems', {
     name: 'Itens Individuais',
@@ -512,7 +521,26 @@ function abrirLojaPara(actor) {
 /* ─────────────────────────────────────────────
    READY — Pré-carrega os itens da loja
 ───────────────────────────────────────────── */
-Hooks.once('ready', () => {
+/** Módulos de conteúdo cujos compêndios de Item entram na loja sozinhos. */
+const MODULOS_AUTOMATICOS = ['suplementos-de-arton'];
+
+/** Põe na lista da loja os compêndios dos módulos conhecidos (uma vez cada). */
+async function adicionarCompendiosAutomaticos() {
+  if (!game.user.isGM) return;
+  const vistos = new Set(game.settings.get(MODULE_ID, 'autoCompendiums') || []);
+  const novos = game.packs
+    .filter(p => p.documentName === 'Item' && MODULOS_AUTOMATICOS.includes(p.metadata.packageName))
+    .map(p => p.collection)
+    .filter(id => !vistos.has(id));
+  if (!novos.length) return;
+  const extras = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
+  await game.settings.set(MODULE_ID, 'extraCompendiums', [...new Set([...extras, ...novos])]);
+  await game.settings.set(MODULE_ID, 'autoCompendiums', [...vistos, ...novos]);
+}
+
+Hooks.once('ready', async () => {
+  try { await adicionarCompendiosAutomaticos(); }
+  catch (err) { console.warn(`${MODULE_ID} | Falha ao detectar compêndios de módulos`, err); }
   // Não bloqueia o carregamento do mundo: aquece o cache em segundo plano
   // para que a primeira abertura da loja seja instantânea.
   warmShopItemsCache();

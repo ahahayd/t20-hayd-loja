@@ -6,7 +6,25 @@
 import { MODULE_ID } from './main.js';
 import { warmShopItemsCache } from './shop-app.js';
 
+/** Compêndio de origem do sistema? (tem opção própria nas configurações) */
+function ehDoSistema(pack) {
+  return pack.metadata.packageType === 'system' || pack.metadata.packageName === game.system.id;
+}
+
+/** Quantos itens a loja venderia (com preço) e quantas magias o compêndio tem. */
+async function contarVendaveis(pack) {
+  const indice = await pack.getIndex({ fields: ['system.preco'] });
+  const c = { itens: 0, magias: 0 };
+  for (const e of indice) {
+    if (e.type === 'magia' || e.type === 'spell') c.magias++;
+    else if (Number(e.system?.preco) > 0) c.itens++;
+  }
+  return c;
+}
+
 export class ShopSettingsApplication extends FormApplication {
+  _contagens = new Map();
+
 
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -25,25 +43,36 @@ export class ShopSettingsApplication extends FormApplication {
     const extraCompendiums = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
     const extraItems       = game.settings.get(MODULE_ID, 'extraItems')       || [];
 
-    // Monta lista de todos os compêndios de Itens disponíveis (para o select)
-    const availablePacks = game.packs
-      .filter(p => p.documentName === 'Item')
-      .map(p => ({
-        id      : p.collection,
-        label   : `${p.metadata.label} [${p.collection}]`,
-        selected: extraCompendiums.includes(p.collection),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    // Estado ainda não salvo das caixas: sobrevive aos render() dos itens.
+    this._sel ??= new Set(extraCompendiums);
 
-    // Enriquece compêndios configurados com labels
-    const configuredPacks = extraCompendiums.map(id => {
-      const pack = game.packs.get(id);
-      return {
-        id,
-        nome : pack ? pack.metadata.label : 'Não encontrado',
-        valid: !!pack,
-      };
-    });
+    // Só módulos e mundo: os compêndios do sistema têm opção própria.
+    const packs = game.packs.filter(p => p.documentName === 'Item' && p.visible && !ehDoSistema(p));
+    await Promise.all(packs.filter(p => !this._contagens.has(p.collection)).map(async p => {
+      try { this._contagens.set(p.collection, await contarVendaveis(p)); }
+      catch { this._contagens.set(p.collection, null); }
+    }));
+
+    const grupos = { modulo: [], mundo: [] };
+    for (const p of packs) {
+      const c = this._contagens.get(p.collection);
+      const chips = [];
+      if (c?.itens)  chips.push({ n: c.itens,  rotulo: 'itens à venda', icone: 'fa-sack' });
+      if (c?.magias) chips.push({ n: c.magias, rotulo: 'magias',        icone: 'fa-wand-sparkles' });
+      grupos[p.metadata.packageType === 'world' ? 'mundo' : 'modulo'].push({
+        id    : p.collection,
+        rotulo: p.metadata.label,
+        pacote: p.metadata.packageType === 'module'
+          ? (game.modules.get(p.metadata.packageName)?.title ?? p.metadata.packageName) : '',
+        ligado: this._sel.has(p.collection),
+        chips,
+      });
+    }
+    const ordenar = l => l.sort((x, y) => (x.pacote + x.rotulo).localeCompare(y.pacote + y.rotulo, 'pt-BR'));
+    const gruposLista = [
+      { titulo: 'Módulos',             icone: 'fa-puzzle-piece', itens: ordenar(grupos.modulo) },
+      { titulo: 'Compêndios do mundo', icone: 'fa-globe',        itens: ordenar(grupos.mundo) },
+    ].filter(g => g.itens.length);
 
     // Enriquece UUIDs com nomes (assíncrono)
     const configuredItems = await Promise.all(
@@ -58,8 +87,7 @@ export class ShopSettingsApplication extends FormApplication {
     );
 
     return {
-      availablePacks,
-      configuredPacks,
+      grupos: gruposLista,
       configuredItems,
     };
   }
@@ -75,29 +103,26 @@ export class ShopSettingsApplication extends FormApplication {
     // Janela de configuração segue o estilo padrão do Foundry, sem tema da loja.
 
     // ── Compêndios ──
-    // Adicionar compêndio selecionado
-    html.find('#btn-add-pack').on('click', async () => {
-      const select = html.find('#pack-select')[0];
-      const id = select?.value;
-      if (!id) return;
-
-      const list = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
-      if (list.includes(id)) {
-        return ui.notifications.warn('Este compêndio já está na lista.');
-      }
-      list.push(id);
-      await game.settings.set(MODULE_ID, 'extraCompendiums', list);
-      warmShopItemsCache();
-      this.render();
+    const caixas = () => [...html.find('input[data-pack]')];
+    html.find('input[data-pack]').on('change', ev => {
+      const { pack } = ev.currentTarget.dataset;
+      if (ev.currentTarget.checked) this._sel.add(pack); else this._sel.delete(pack);
     });
+    const marcar = valor => {
+      for (const cb of caixas()) { cb.checked = valor; cb.dispatchEvent(new Event('change')); }
+    };
+    html.find('#btn-all-packs').on('click', () => marcar(true));
+    html.find('#btn-none-packs').on('click', () => marcar(false));
 
-    // Remover compêndio
-    html.find('.btn-remove-pack').on('click', async ev => {
-      const id   = ev.currentTarget.dataset.id;
-      const list = (game.settings.get(MODULE_ID, 'extraCompendiums') || []).filter(p => p !== id);
-      await game.settings.set(MODULE_ID, 'extraCompendiums', list);
+    html.find('#btn-save').on('click', async () => {
+      // Compêndios que a lista não mostra (sistema, módulo desligado) ficam como estão.
+      const mostrados = new Set(caixas().map(cb => cb.dataset.pack));
+      const atual = game.settings.get(MODULE_ID, 'extraCompendiums') || [];
+      const lista = [...atual.filter(id => !mostrados.has(id)), ...caixas().filter(cb => cb.checked).map(cb => cb.dataset.pack)];
+      await game.settings.set(MODULE_ID, 'extraCompendiums', lista);
       warmShopItemsCache();
-      this.render();
+      ui.notifications.info('Fontes da loja salvas.');
+      this.close();
     });
 
     // ── Itens individuais ──
@@ -132,18 +157,6 @@ export class ShopSettingsApplication extends FormApplication {
     });
 
     // Limpar tudo
-    html.find('#btn-clear-packs').on('click', async () => {
-      const ok = await Dialog.confirm({
-        title  : 'Limpar compêndios?',
-        content: '<p>Remover todos os compêndios configurados?</p>',
-      });
-      if (ok) {
-        await game.settings.set(MODULE_ID, 'extraCompendiums', []);
-        warmShopItemsCache();
-        this.render();
-      }
-    });
-
     html.find('#btn-clear-items').on('click', async () => {
       const ok = await Dialog.confirm({
         title  : 'Limpar itens?',

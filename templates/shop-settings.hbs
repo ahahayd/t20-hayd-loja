@@ -1,35 +1,32 @@
 {{!-- templates/shop-settings.hbs — Configurações das fontes da loja (mesmo padrão da tela de fontes do GMTools) --}}
 <form class="t20-loja-settings-form t20g-cf">
   <p class="t20g-apoio t20g-cf-intro">
-    Escolha de onde a loja tira itens além dos compêndios padrão do sistema. As demais opções
+    Escolha de onde a loja tira itens além dos compêndios padrão do sistema. Nada muda até você clicar em <b>Salvar</b>. As demais opções
     (compêndios do sistema, itens do mundo) ficam em <b>Configurações do Módulo</b>.
   </p>
 
+  {{#each grupos}}
   <section class="t20g-cf-grupo">
-    <h3 class="t20g-rotulo"><i class="fa-solid fa-book"></i> Compêndios adicionais</h3>
-    <div class="t20g-cf-add">
-      <select id="pack-select" class="t20g-campo">
-        <option value="">Selecione um compêndio…</option>
-        {{#each availablePacks}}
-        <option value="{{id}}" {{#if selected}}disabled{{/if}}>{{label}}</option>
-        {{/each}}
-      </select>
-      <button type="button" id="btn-add-pack" class="t20g-btn t20g-btn--primario"><i class="fa-solid fa-plus"></i> Adicionar</button>
-    </div>
+    <h3 class="t20g-rotulo"><i class="fa-solid {{icone}}"></i> {{titulo}}
+      {{#if dica}}<span class="t20g-cf-dica">— {{dica}}</span>{{/if}}</h3>
     <div class="t20g-cf-lista">
-      {{#each configuredPacks}}
-      <div class="t20g-cf-linha {{#unless valid}}invalid{{/unless}}">
+      {{#each itens}}
+      <label class="t20g-cf-linha t20g-cf-pack">
+        <input type="checkbox" data-pack="{{id}}" {{checked ligado}}>
         <span class="t20g-cf-nome" title="{{id}}">
-          <b>{{nome}}</b>
-          <span class="t20g-apoio">{{id}}</span>
+          <b>{{rotulo}}</b>
+          {{#if pacote}}<span class="t20g-apoio">{{pacote}}</span>{{/if}}
         </span>
-        <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma btn-remove-pack" data-id="{{id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></button>
-      </div>
-      {{else}}
-      <p class="t20g-apoio t20g-cf-vazio">Nenhum compêndio adicional.</p>
+        <span class="t20g-cf-chips">
+          {{#each chips}}<span class="t20g-chip" data-tooltip="{{n}} {{rotulo}}"><i class="fa-solid {{icone}}"></i> {{n}}</span>{{/each}}
+        </span>
+      </label>
       {{/each}}
     </div>
   </section>
+  {{else}}
+  <p class="t20g-apoio t20g-cf-vazio">Nenhum compêndio de itens de módulo ou do mundo encontrado.</p>
+  {{/each}}
 
   <section class="t20g-cf-grupo">
     <h3 class="t20g-rotulo"><i class="fa-solid fa-tag"></i> Itens individuais <span class="t20g-cf-dica">— por UUID, do mundo ou de compêndio</span></h3>
@@ -53,7 +50,10 @@
   </section>
 
   <footer class="form-footer t20g-cf-rodape">
-    <button type="button" id="btn-clear-packs" class="t20g-btn t20g-btn--fantasma" {{#unless configuredPacks.length}}disabled{{/unless}}><i class="fa-solid fa-trash"></i> Limpar compêndios</button>
+    <button type="button" id="btn-all-packs" class="t20g-btn t20g-btn--fantasma">Ligar todos</button>
+    <button type="button" id="btn-none-packs" class="t20g-btn t20g-btn--fantasma">Desligar todos</button>
     <button type="button" id="btn-clear-items" class="t20g-btn t20g-btn--fantasma" {{#unless configuredItems.length}}disabled{{/unless}}><i class="fa-solid fa-trash"></i> Limpar itens</button>
+    <span class="t20g-cresce"></span>
+    <button type="button" id="btn-save" class="t20g-btn t20g-btn--primario"><i class="fa-solid fa-check"></i> Salvar</button>
   </footer>
 </form>
