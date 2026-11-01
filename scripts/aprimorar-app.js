@@ -96,7 +96,7 @@ function escapar(texto) {
   return foundry.utils.escapeHTML?.(String(texto ?? '')) ?? String(texto ?? '');
 }
 
-function formatarCusto(cobre) {
+export function formatarCusto(cobre) {
   if (cobre <= 0) return 'Grátis';
   if (cobre < 10) return `${cobre} TC`;
   return precoDisplay(cobre / 10);
@@ -177,7 +177,7 @@ function nomesNativosDoItem(doc) {
  * flags do t20-hayd-itens, flag desta loja e os campos nativos do sistema.
  * Vale o maior valor encontrado em cada tipo.
  */
-function detectarExistentes(doc) {
+export function detectarExistentes(doc) {
   let m = 0, e = 0;
   const fontes = [];
 
@@ -233,11 +233,123 @@ function blocoDescricao(entradas) {
 
 const RE_BLOCO = /<section class="t20-loja-aprimoramentos">[\s\S]*?<\/section>/;
 
+/** Item que recebe as entradas: criado da loja, separado da pilha ou o próprio. */
+async function obterItemAlvo(actor, alvo) {
+  if (alvo.origem === 'loja') {
+    const doc = alvo.doc ?? await fromUuid(alvo.uuid);
+    if (!doc) {
+      ui.notifications.error('Item não encontrado no compêndio.');
+      return null;
+    }
+    const data = doc.toObject();
+    delete data._id;
+    data.system.qtd = alvo.qtdAlvo;
+    const [criado] = await actor.createEmbeddedDocuments('Item', [data]);
+    return criado;
+  }
+
+  const original = actor.items.get(alvo.id);
+  if (!original) {
+    ui.notifications.error('O item não está mais no inventário.');
+    return null;
+  }
+  const estoque = Number(original.system?.qtd) || 1;
+  // A pilha inteira aprimorada não precisa separar nada.
+  const separadas = Math.min(alvo.qtdSeparar ?? 1, estoque);
+  if (alvo.separar && separadas < estoque) {
+    await original.update({ 'system.qtd': estoque - separadas });
+    const data = original.toObject();
+    delete data._id;
+    data.system.qtd = separadas;
+    const [criado] = await actor.createEmbeddedDocuments('Item', [data]);
+    return criado;
+  }
+  return original;
+}
+
+/**
+ * Adiciona as entradas pelo t20-hayd-itens e acerta o preço base para
+ * que o total dele bata com as melhorias/encantos já existentes que ele
+ * não rastreia (declarados na janela).
+ */
+async function aplicarViaItens(actor, api, item, calc) {
+  for (const s of calc.sel) {
+    if (s.tipo === 'material') await api.efeitos.adicionarMaterial(item, s.key);
+    else await api.efeitos.adicionarEntrada(item, s.key);
+    item = actor.items.get(item.id) ?? item;
+  }
+  const p = api.efeitos.calcularPreco(item);
+  const extras = p.melhorias + p.encantos + p.materiais;
+  await api.efeitos.definirPrecoBase(item, Math.max(0, calc.precoFinal - extras));
+  await gravarRegistro(actor.items.get(item.id) ?? item, calc, { descricao: true });
+}
+
+/**
+ * Sem o t20-hayd-itens: preço ajustado e entradas na descrição. No v14,
+ * as que existem como melhoria nativa do Tormenta20 1.6 entram também na
+ * lista do sistema, que cria os efeitos de verdade no item.
+ */
+async function aplicarNaDescricao(actor, item, calc) {
+  const update = { 'system.preco': calc.precoFinal };
+  if (upgradesNativosDisponiveis() && item.system?.upgrades) {
+    const listas = {};
+    for (const s of calc.sel) {
+      const nativo = upgradeNativo(s, item);
+      if (!nativo) continue;
+      const cat = CATEGORIAS_NATIVAS[s.tipo];
+      listas[cat] ??= new Set(item.system.upgrades[cat] ?? []);
+      listas[cat].add(nativo.uuid);
+    }
+    for (const [cat, uuids] of Object.entries(listas)) update[`system.upgrades.${cat}`] = [...uuids];
+  }
+  await item.update(update);
+  await gravarRegistro(actor.items.get(item.id) ?? item, calc, { descricao: true });
+}
+
+/** Flag da loja (para detectar depois) e, opcionalmente, bloco na descrição. */
+async function gravarRegistro(item, calc, { descricao }) {
+  const anterior = item.getFlag(MODULE_ID, 'aprimoramentos') ?? {};
+  const entradas = [
+    ...(anterior.entradas ?? []),
+    ...calc.sel.map(s => ({ nome: s.nome, tipo: s.tipo, beneficio: s.beneficio, especial: s.especial })),
+  ];
+  const update = {
+    [`flags.${MODULE_ID}.aprimoramentos`]: { nMelhorias: calc.totalM, nEncantos: calc.totalE, entradas },
+  };
+  if (descricao) {
+    const atual = item.system?.description?.value ?? '';
+    const bloco = blocoDescricao(entradas);
+    update['system.description.value'] = RE_BLOCO.test(atual) ? atual.replace(RE_BLOCO, bloco) : `${bloco}${atual}`;
+  }
+  await item.update(update);
+}
+
+/**
+ * Aplica melhorias/encantos/materiais em `alvo`. Usada pela própria janela
+ * e pela construção planejada, que só aplica depois de passar no teste.
+ * @returns {Promise<Item|null>} o item aprimorado; null se ele não existe mais.
+ */
+export async function aplicarAprimoramento(actor, alvo, calc) {
+  const catalogo = await carregarCatalogo();
+  const item = await obterItemAlvo(actor, alvo);
+  if (!item) return null;
+  const api = apiItens();
+  const viaApi = !!(api && catalogo && calc.sel.every(s => s.key) && elegivel(item, catalogo));
+  if (viaApi) await aplicarViaItens(actor, api, item, calc);
+  else await aplicarNaDescricao(actor, item, calc);
+  return actor.items.get(item.id) ?? item;
+}
+
 export class AprimorarApplication extends Application {
-  constructor(shopApp, options = {}) {
+  /**
+   * @param {ConstrucaoApplication} [plano] com a construção planejada ligada,
+   *   a janela não cobra nem aplica nada: só devolve a escolha para o plano.
+   */
+  constructor(shopApp, options = {}, plano = null) {
     super(options);
     this.shopApp = shopApp;
     this.actor = shopApp.actor;
+    this._plano = plano;
     this._etapa = 'escolher';
     this._fonte = 'inventario';
     this._alvo = null;
@@ -275,6 +387,7 @@ export class AprimorarApplication extends Application {
     this._percent = this.shopApp?._buyPercent ?? 100;
     this._fracao = 1 / 3;
     this._desconto = 0;
+    if (this._plano) this._modo = 'craft';
   }
 
   /* ── Dados ─────────────────────────────────── */
@@ -565,7 +678,7 @@ export class AprimorarApplication extends Application {
       <footer class="apr-rodape">
         <div class="apr-rodape-colunas">
           <div class="apr-pagamento">
-            <div class="apr-rodape-linha">
+            <div class="apr-rodape-linha" ${this._plano ? 'hidden' : ''}>
               <label>Forma
                 <select name="modo">
                   <option value="buy" ${this._modo === 'buy' ? 'selected' : ''}>Comprar</option>
@@ -582,6 +695,7 @@ export class AprimorarApplication extends Application {
                 <label>Desconto (TP) <input type="number" name="desconto" min="0" step="0.1" value="${this._desconto}" /></label>
               </span>
             </div>
+            ${this._plano ? '<p class="apr-dica">O teste, a CD, a fração e o tempo são definidos na lista de construção. O total abaixo usa 1/3 do valor.</p>' : ''}
             <p class="apr-dica">${modoApi}</p>
           </div>
 
@@ -595,7 +709,7 @@ export class AprimorarApplication extends Application {
           </div>
         </div>
 
-        <button type="button" class="apr-confirmar"><i class="fas fa-hammer-crash"></i> Aplicar</button>
+        <button type="button" class="apr-confirmar"><i class="fas fa-hammer-crash"></i> ${this._plano ? 'Adicionar à construção' : 'Aplicar'}</button>
       </footer>`;
   }
 
@@ -764,19 +878,18 @@ export class AprimorarApplication extends Application {
     const calc = this._calcular(catalogo);
     if (!calc.sel.length) return ui.notifications.warn('Selecione pelo menos uma melhoria, encanto ou material.');
 
+    if (this._plano) {
+      this._plano.adicionarAprimoramento(this._alvo, calc);
+      return this.close();
+    }
+
     const wealth = this.shopApp._wealthInfo();
     if (toCobre(wealth.to, wealth.tp, wealth.tc) < calc.custoCobre) {
       return ui.notifications.warn(`${this.actor.name} não tem moedas suficientes.`);
     }
 
-    const alvo = this._alvo;
-    const item = await this._obterItemAlvo();
+    const item = await aplicarAprimoramento(this.actor, this._alvo, calc);
     if (!item) return;
-
-    const api = apiItens();
-    const viaApi = !!(api && catalogo && calc.sel.every(s => s.key) && elegivel(item, catalogo));
-    if (viaApi) await this._aplicarViaItens(api, item, calc);
-    else await this._aplicarNaDescricao(item, calc);
 
     const { to, tp, tc, troco, pago } = debitarCarteira(wealth, calc.custoCobre);
     await this.actor.update({
@@ -790,90 +903,6 @@ export class AprimorarApplication extends Application {
     ui.notifications.info(`${item.name}: aprimoramentos aplicados.`);
     this.shopApp.render();
     this.close();
-  }
-
-  /** Item que recebe as entradas: criado da loja, separado da pilha ou o próprio. */
-  async _obterItemAlvo() {
-    const alvo = this._alvo;
-    if (alvo.origem === 'loja') {
-      const data = alvo.doc.toObject();
-      delete data._id;
-      data.system.qtd = alvo.qtdAlvo;
-      const [criado] = await this.actor.createEmbeddedDocuments('Item', [data]);
-      return criado;
-    }
-
-    const original = this.actor.items.get(alvo.id);
-    if (!original) {
-      ui.notifications.error('O item não está mais no inventário.');
-      return null;
-    }
-    if (alvo.separar && (Number(original.system?.qtd) || 1) > 1) {
-      await original.update({ 'system.qtd': original.system.qtd - 1 });
-      const data = original.toObject();
-      delete data._id;
-      data.system.qtd = 1;
-      const [criado] = await this.actor.createEmbeddedDocuments('Item', [data]);
-      return criado;
-    }
-    return original;
-  }
-
-  /**
-   * Adiciona as entradas pelo t20-hayd-itens e acerta o preço base para
-   * que o total dele bata com as melhorias/encantos já existentes que ele
-   * não rastreia (declarados na janela).
-   */
-  async _aplicarViaItens(api, item, calc) {
-    for (const s of calc.sel) {
-      if (s.tipo === 'material') await api.efeitos.adicionarMaterial(item, s.key);
-      else await api.efeitos.adicionarEntrada(item, s.key);
-      item = this.actor.items.get(item.id) ?? item;
-    }
-    const p = api.efeitos.calcularPreco(item);
-    const extras = p.melhorias + p.encantos + p.materiais;
-    await api.efeitos.definirPrecoBase(item, Math.max(0, calc.precoFinal - extras));
-    await this._gravarRegistro(this.actor.items.get(item.id) ?? item, calc, { descricao: true });
-  }
-
-  /**
-   * Sem o t20-hayd-itens: preço ajustado e entradas na descrição. No v14,
-   * as que existem como melhoria nativa do Tormenta20 1.6 entram também na
-   * lista do sistema, que cria os efeitos de verdade no item.
-   */
-  async _aplicarNaDescricao(item, calc) {
-    const update = { 'system.preco': calc.precoFinal };
-    if (upgradesNativosDisponiveis() && item.system?.upgrades) {
-      const listas = {};
-      for (const s of calc.sel) {
-        const nativo = upgradeNativo(s, item);
-        if (!nativo) continue;
-        const cat = CATEGORIAS_NATIVAS[s.tipo];
-        listas[cat] ??= new Set(item.system.upgrades[cat] ?? []);
-        listas[cat].add(nativo.uuid);
-      }
-      for (const [cat, uuids] of Object.entries(listas)) update[`system.upgrades.${cat}`] = [...uuids];
-    }
-    await item.update(update);
-    await this._gravarRegistro(this.actor.items.get(item.id) ?? item, calc, { descricao: true });
-  }
-
-  /** Flag da loja (para detectar depois) e, opcionalmente, bloco na descrição. */
-  async _gravarRegistro(item, calc, { descricao }) {
-    const anterior = item.getFlag(MODULE_ID, 'aprimoramentos') ?? {};
-    const entradas = [
-      ...(anterior.entradas ?? []),
-      ...calc.sel.map(s => ({ nome: s.nome, tipo: s.tipo, beneficio: s.beneficio, especial: s.especial })),
-    ];
-    const update = {
-      [`flags.${MODULE_ID}.aprimoramentos`]: { nMelhorias: calc.totalM, nEncantos: calc.totalE, entradas },
-    };
-    if (descricao) {
-      const atual = item.system?.description?.value ?? '';
-      const bloco = blocoDescricao(entradas);
-      update['system.description.value'] = RE_BLOCO.test(atual) ? atual.replace(RE_BLOCO, bloco) : `${bloco}${atual}`;
-    }
-    await item.update(update);
   }
 
   async _mensagem(item, calc, saldo, troco, pago) {

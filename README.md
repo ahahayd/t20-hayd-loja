@@ -35,6 +35,14 @@ Também é possível comprar magias, como pergaminho (versão padrão) ou poçã
   <img src="assets/screenshots/loja-aprimorar.png" alt="Itens superiores e encantados" width="400">
 </p>
 
+### Planejar construção
+
+Marque **Planejar construção** na loja para montar uma lista de itens a fabricar. Enquanto a opção estiver marcada, a vitrine só constrói: o martelo de cada item ou magia manda para a lista, e a janela soma o custo, o tempo de trabalho e os testes de Ofício.
+
+Cada item da lista tem seu teste, CD, fração do preço, tempo e redução de tempo, além de "Gasta tempo?" e do –5 para fazer mais unidades no mesmo tempo. A janela sugere esses valores pela categoria do item, e poções e pergaminhos calculam a CD pelo custo em PM. Dali mesmo dá para aprimorar ou encantar um item que já existe.
+
+Ao concluir, os testes são rolados, o dinheiro é descontado, os itens entram no inventário e sai um cartão só no chat. A lista recomeça vazia, e o que falhou fica no relatório. A aba **Preferências** guarda, por ficha, os padrões de cada categoria e outras opções.
+
 ### Vender
 
 Na aba de venda, escolha itens do próprio inventário e o percentual do preço a receber. Itens de poder e habilidades não aparecem na lista — só o que faz sentido vender.

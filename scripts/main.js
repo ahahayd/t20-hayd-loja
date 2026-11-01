@@ -428,6 +428,28 @@ Hooks.once('init', () => {
     default: 1000
   });
 
+  // Conversão de tempo da construção planejada: regra da mesa, vale para todos
+  game.settings.register(MODULE_ID, 'construcaoDiasNoMes', {
+    name: 'Construção: mês de trabalho',
+    hint: 'Quanto dura um mês no tempo de fabricação.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    choices: { 30: '30 dias', 28: '4 semanas' },
+    default: 30,
+    onChange: () => rerenderJanelasLoja(),
+  });
+
+  game.settings.register(MODULE_ID, 'construcaoHorasPorDia', {
+    name: 'Construção: horas por dia de trabalho',
+    hint: 'Quantas horas de trabalho fecham um dia. Define como itens de 1 hora somam com os demais.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 8,
+    onChange: () => rerenderJanelasLoja(),
+  });
+
   // Mensagens de compra/venda no chat
   game.settings.register(MODULE_ID, 'enableChatMessages', {
     name: 'Enviar mensagem no chat ao comprar/vender',

@@ -14,6 +14,7 @@
 
 import { MODULE_ID, aplicarTemaLoja, botoesCabecalhoComTema, pisoDaJanela, observarLargura, lampiaoLigado } from './main.js';
 import { AprimorarApplication } from './aprimorar-app.js';
+import { ConstrucaoApplication } from './construcao-app.js';
 import { agitarLamparina } from './lamparina.mjs';
 import { ehV14 } from './versao.mjs';
 
@@ -793,6 +794,11 @@ export class ShopApplication extends Application {
     this._sideFilterScroll = 0;
     this._cartItems = new Map();
     this._cartApp = null;
+    /** @type {boolean} "Planejar construção": o martelo manda para a lista */
+    this._modoConstrucao = false;
+    this._construcaoApp = null;
+    /** @type {boolean} Construindo: só as magias que o ator conhece */
+    this._soMinhasMagias = false;
     /** Quantas linhas são desenhadas por página de rolagem */
     this._pageSize = 30;
     /** Quantas linhas estão desenhadas agora */
@@ -809,10 +815,13 @@ export class ShopApplication extends Application {
       if (updatedActor?.id !== this.actor?.id) return;
       if (!data?.system?.dinheiro) return;
       this.render();
+      this._construcaoApp?.atualizarSaldo();
     });
   }
 
   async close(options = {}) {
+    await this._construcaoApp?.close({ pelaLoja: true });
+    this._construcaoApp = null;
     this._observadorLargura?.disconnect();
     this._observadorLargura = null;
     if (this._actorUpdateHook) {
@@ -909,6 +918,8 @@ export class ShopApplication extends Application {
       hideSpells : this._hideSpells,
       filterMatch: this._filterMatch,
       hasMore    : list.length > items.length,
+      construcao : this._modoConstrucao,
+      soMinhasMagias: this._soMinhasMagias,
     };
   }
 
@@ -919,7 +930,7 @@ export class ShopApplication extends Application {
     return JSON.stringify([
       this._mode, this._search, this._typeFilter, this._sortBy,
       this._hideSpells, this._affordableOnly, this._buyPercent, this._sellPercent,
-      this._filterMatch, Array.from(this._filterTags).sort(),
+      this._filterMatch, Array.from(this._filterTags).sort(), this._modoConstrucao, this._soMinhasMagias,
     ]);
   }
 
@@ -947,6 +958,17 @@ export class ShopApplication extends Application {
     // O contador sempre reflete o filtro de busca/tipo/tags/magias (como
     // antes, sem considerar o "posso pagar")
     const totalItems = filtered.length;
+
+    // Construindo, nada é comprado: mostra o preço de tabela (é sobre ele que
+    // a fração incide) e não esconde nem apaga item por falta de dinheiro.
+    if (this._modoConstrucao) {
+      if (this._soMinhasMagias) {
+        const conhecidas = new Set(this.actor.items.filter(i => isSpellType(i.type)).map(i => normalizeText(i.name)));
+        filtered = filtered.filter(item => !item.isSpell || conhecidas.has(item.searchName));
+      }
+      return { wealth, list: filtered, totalItems: filtered.length, decorate: item => ({ ...item, canAfford: true }) };
+    }
+
     // Percentual de preço do modo compra (desconto/acréscimo do mestre)
     const fator = this._buyPercent / 100;
     const custoCobre = item => Math.round(item.preco * fator * 10);
@@ -984,6 +1006,7 @@ export class ShopApplication extends Application {
       const html = await render(`modules/${MODULE_ID}/templates/shop-rows.hbs`, {
         items: fatia,
         mode : this._mode,
+        construcao: this._modoConstrucao,
       });
       tbody.append(html);
       this._visibleCount = inicio + fatia.length;
@@ -1129,7 +1152,7 @@ export class ShopApplication extends Application {
   async _promptSpellForm(shopItem) {
     return new Promise(resolve => {
       new Dialog({
-        title: `Comprar ${shopItem.name}`,
+        title: `${this._modoConstrucao ? 'Construir' : 'Comprar'} ${shopItem.name}`,
         content: `
           <div class="t20-loja-spell-dialog">
             <p class="spell-dialog-hint">Magia de ${shopItem.spellCirculo}º círculo — custo base ${shopItem.spellCustoPM} PM.</p>
@@ -1951,6 +1974,58 @@ export class ShopApplication extends Application {
     this.render();
   }
 
+  /** Liga/desliga "Planejar construção" e a janela que vem com ele. */
+  _alternarConstrucao(ligado) {
+    this._modoConstrucao = ligado;
+    if (ligado) {
+      this._mode = 'buy';
+      this._construcaoApp = new ConstrucaoApplication(this);
+      this._construcaoApp.render(true, this._abrirEspacoAoLado());
+    } else {
+      this._construcaoApp?.close({ pelaLoja: true });
+      this._construcaoApp = null;
+    }
+    this.render();
+  }
+
+  /**
+   * A lista abre colada à direita da loja, porque os martelos ficam na borda
+   * direita da vitrine. A loja abre centralizada, então desliza para o lado
+   * para dar espaço; em tela pequena a lista estreita até o piso dela.
+   */
+  _abrirEspacoAoLado() {
+    const margem = 8;
+    const { width: larguraLista } = ConstrucaoApplication.defaultOptions;
+    const { left, top, width } = this.position;
+    const novaEsquerda = Math.max(margem, Math.min(left, window.innerWidth - width - larguraLista - margem * 2));
+    if (novaEsquerda !== left) this.setPosition({ left: novaEsquerda });
+
+    const inicio = novaEsquerda + width + margem;
+    const largura = Math.max(ConstrucaoApplication.PISO.width, Math.min(larguraLista, window.innerWidth - inicio - margem));
+    return { left: Math.min(inicio, window.innerWidth - largura - margem), top, width: largura };
+  }
+
+  /** A janela de construção fechou pelo X: a loja volta ao normal. */
+  construcaoFechada() {
+    this._construcaoApp = null;
+    this._modoConstrucao = false;
+    if (this.rendered) this.render();
+  }
+
+  /** Martelo de magia com a construção ligada: resolve e manda para a lista. */
+  async _planejarMagia(uuid) {
+    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+
+    const base = await this._resolveSpellBase(shopItem);
+    if (!base || !this._construcaoApp) return;
+    const { forma, sourceDoc, pm, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature } = base;
+    const { itemData, dedupeKey, subtipo, unitPreco } = buildSpellConsumableData(sourceDoc, {
+      forma, pm, qty: 1, contentDoc, resolvedEffects, aprimoramentosHtml, configSignature,
+    });
+    this._construcaoApp.adicionarMagia({ uuid, forma, pm, subtipo, dedupeKey, itemData, unitPrice: unitPreco });
+  }
+
   /** Itens Superiores e Encantados: janela própria (aprimorar-app.js). */
   _openUpgradeDialog() {
     if (!this._upgradeApp || !this._upgradeApp.rendered) {
@@ -2038,12 +2113,16 @@ export class ShopApplication extends Application {
 
     // Botão Construir
     lista.on('click', '.btn-craft', ev => {
-      this._craftItem(ev.currentTarget.dataset.uuid);
+      const { uuid } = ev.currentTarget.dataset;
+      if (this._construcaoApp) this._construcaoApp.adicionarItem(uuid);
+      else this._craftItem(uuid);
     });
 
     // Botão Construir (magia — abre escolha de poção/pergaminho, depois fabricação)
     lista.on('click', '.btn-craft-spell', ev => {
-      this._craftSpell(ev.currentTarget.dataset.uuid);
+      const { uuid } = ev.currentTarget.dataset;
+      if (this._construcaoApp) this._planejarMagia(uuid);
+      else this._craftSpell(uuid);
     });
 
     // Botão Vender
@@ -2147,6 +2226,17 @@ export class ShopApplication extends Application {
     html.find('.shop-filter-checkbox').each((_, el) => {
       el.checked = this._filterTags.has(el.dataset.tag);
     });
+
+    // "Não exibir magias" não convive com o que pede para ver magias: quem
+    // está marcado bloqueia o outro lado, dizendo o motivo.
+    const filtraMagias = [...this._filterTags].some(tag => /^(cat:magia|circulo:|escola:|stipo:)/.test(tag));
+    const soMinhas = this._modoConstrucao && this._soMinhasMagias;
+    html.find('.shop-hide-spells').prop('disabled', filtraMagias || soMinhas)
+      .closest('label').attr('title', filtraMagias || soMinhas ? 'Há um filtro de magias marcado.' : null);
+    html.find('.shop-so-minhas-magias').prop('disabled', this._hideSpells);
+    html.find('.side-filter-group[data-group="spells"]').toggleClass('t20l-bloqueado', this._hideSpells)
+      .attr('title', this._hideSpells ? 'Desmarque "Não exibir magias" para usar este filtro.' : null)
+      .find('.shop-filter-checkbox').prop('disabled', this._hideSpells);
 
     html.find('.side-filter-group').each((_, el) => {
       const key = el.dataset.group;
@@ -2281,6 +2371,17 @@ export class ShopApplication extends Application {
     html.find('.shop-hide-spells').on('change', ev => {
       this._hideSpells = ev.currentTarget.checked;
       this.render();
+    });
+
+    // Só exibir magias que possuo
+    html.find('.shop-so-minhas-magias').on('change', ev => {
+      this._soMinhasMagias = ev.currentTarget.checked;
+      this.render();
+    });
+
+    // Planejar construção
+    html.find('.shop-modo-construcao').on('change', ev => {
+      this._alternarConstrucao(ev.currentTarget.checked);
     });
 
     // Abrir a ficha do item (delegado, ver nota acima)

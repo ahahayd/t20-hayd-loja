@@ -1,0 +1,216 @@
+{{!-- templates/construcao.hbs — Planejador de construção --}}
+<div class="cons-root">
+  <nav class="cons-barra">
+    <button type="button" class="cons-aba {{#if abaPlano}}active{{/if}}" data-aba="plano">
+      <i class="fas fa-hammer"></i> Construções <span class="cons-contador">{{totalLinhas}}</span>
+    </button>
+    <button type="button" class="cons-aba {{#unless abaPlano}}active{{/unless}}" data-aba="prefs">
+      <i class="fas fa-sliders-h"></i> Preferências
+    </button>
+    <button type="button" class="cons-aprimorar" title="Melhorias, encantos e materiais especiais em um item do inventário ou da loja">
+      <i class="fas fa-hammer-crash"></i> Aprimorar ou encantar item
+    </button>
+  </nav>
+
+  <section class="cons-plano" data-painel="plano" {{#unless abaPlano}}hidden{{/unless}}>
+    {{#if sessao}}
+    <div class="cons-lista">
+      <p class="cons-dica">Clique em um resultado para trocar sucesso e falha. Também dá para trocar pela mensagem no chat.</p>
+      {{#each sessao.testes}}
+      <button type="button" class="cons-resultado {{#if passou}}cons-ok{{else}}cons-erro{{/if}}" data-id="{{id}}">
+        <img src="{{img}}" alt="">
+        <span class="cons-resultado-nome">{{nome}} <em>×{{unidades}}</em><small>{{pericia}} · CD {{cd}}</small></span>
+        <b>{{total}}</b>
+        <span class="cons-resultado-estado">{{#if passou}}Sucesso{{else}}Falha{{/if}}{{#if trocado}} (alterado){{/if}}</span>
+      </button>
+      {{/each}}
+    </div>
+    <footer class="cons-rodape">
+      <dl class="cons-totais">
+        <div><dt>Sucessos</dt><dd>{{sessao.sucessos}}</dd></div>
+        <div><dt>Falhas</dt><dd>{{sessao.falhas}}</dd></div>
+      </dl>
+      <div class="cons-acoes">
+        <button type="button" class="cons-descartar"><i class="fas fa-times"></i> Descartar testes</button>
+        <button type="button" class="cons-concluir cons-finalizar"><i class="fas fa-flag-checkered"></i> Finalizar e ver relatório</button>
+      </div>
+    </footer>
+    {{else}}
+    <div class="cons-lista">
+      {{#each linhas}}
+      <article class="cons-linha" data-id="{{id}}">
+        <header class="cons-linha-topo">
+          <img src="{{img}}" alt="">
+          <div class="cons-linha-nome">
+            <strong>{{nome}}{{#if temPacote}} <em>pacote de {{pacote}}</em>{{/if}}</strong>
+            {{#if detalhe}}<small>{{detalhe}}</small>{{/if}}
+          </div>
+          <select class="cons-categoria" data-campo="categoria" aria-label="Categoria">{{#each opcoesCategoria}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+          <button type="button" class="cons-remover" data-tooltip="Remover da lista"><i class="fas fa-trash"></i></button>
+        </header>
+
+        <div class="cons-blocos">
+          <section class="cons-bloco cons-b-producao">
+            <h4><i class="fas fa-boxes"></i> Produção <b class="cons-l-unidades"></b></h4>
+            <div class="cons-campos">
+              <label class="cons-campo" data-tooltip="Quantas vezes o craft é feito. Cada craft é um teste e uma vez o tempo."><span>Crafts</span>
+                <input type="number" data-campo="qtd" min="1" {{#if maxCrafts}}max="{{maxCrafts}}"{{/if}} value="{{qtd}}" {{#unless podeQuantidade}}disabled{{/unless}}>
+              </label>
+              {{#if podeMultiplicar}}
+              <label class="cons-campo" data-tooltip="Doses feitas em cada craft, sem penalidade"><span>Multiplicador</span>
+                <select data-campo="multDoses">{{#each opcoesMult}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+              </label>
+              {{/if}}
+              {{#if podeLote}}
+              <div class="cons-marcas"><label><input type="checkbox" data-campo="lote" {{#if lote}}checked{{/if}}> {{rotuloLote}}</label></div>
+              {{/if}}
+            </div>
+            <small class="cons-l-formula"></small>
+          </section>
+
+          <section class="cons-bloco cons-b-teste">
+            <h4><i class="fas fa-dice-d20"></i> Teste <b class="cons-l-testes"></b></h4>
+            <div class="cons-campos">
+              <label class="cons-campo cons-largo"><span>Perícia</span>
+                <select data-campo="oficio">{{#each opcoesOficio}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+              </label>
+              <label class="cons-campo" {{#if cdAutomatica}}data-tooltip="20 + custo em PM da magia"{{/if}}><span>CD</span>
+                <input type="number" data-campo="cd" min="0" value="{{cd}}" placeholder="?">
+              </label>
+            </div>
+            <small class="cons-l-mod"></small>
+          </section>
+
+          <section class="cons-bloco cons-b-custo">
+            <h4><i class="fas fa-coins"></i> Custo <b class="cons-l-custo"></b></h4>
+            <div class="cons-campos">
+              <label class="cons-campo"><span>Fração</span>
+                <select data-campo="fracao">{{#each opcoesFracao}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+              </label>
+              <label class="cons-campo" data-tooltip="Matéria-prima que você já tem, em TP"><span>Desconto (TP)</span>
+                <input type="number" data-campo="desconto" min="0" step="0.1" value="{{desconto}}">
+              </label>
+            </div>
+            <small class="cons-l-unitario"></small>
+          </section>
+
+          <section class="cons-bloco cons-b-tempo">
+            <h4><i class="fas fa-hourglass-half"></i> Tempo <b class="cons-l-tempo"></b></h4>
+            <div class="cons-campos">
+              <div class="cons-campo cons-par"><span>Por craft</span>
+                <div>
+                  <input type="number" data-campo="tempoValor" min="0" step="any" value="{{tempoValor}}" aria-label="Tempo">
+                  <select data-campo="tempoUnidade" aria-label="Unidade do tempo">{{#each opcoesTempo}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+                </div>
+              </div>
+              <div class="cons-campo cons-par"><span>Reduzir</span>
+                <div>
+                  <input type="number" data-campo="reducaoValor" min="0" step="any" value="{{reducaoValor}}" aria-label="Redução do tempo">
+                  <select data-campo="reducaoUnidade" aria-label="Unidade da redução">{{#each opcoesReducao}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+                </div>
+              </div>
+            </div>
+            <div class="cons-marcas">
+              <label data-tooltip="Desmarque quando um efeito ou item der esta construção de graça, no mesmo tempo de outra">
+                <input type="checkbox" data-campo="gastaTempo" {{#if gastaTempo}}checked{{/if}}> Gasta tempo?
+              </label>
+            </div>
+          </section>
+        </div>
+      </article>
+      {{else}}
+      <p class="cons-vazio">
+        <i class="fas fa-hammer"></i>
+        Clique no martelo de um item da loja para adicioná-lo aqui.
+      </p>
+      {{/each}}
+    </div>
+
+    <footer class="cons-rodape">
+      <dl class="cons-totais">
+        <div><dt>Saldo</dt><dd class="cons-t-saldo"></dd></div>
+        <div><dt>Testes</dt><dd class="cons-t-testes"></dd></div>
+        <div class="cons-total-custo"><dt>Custo total</dt><dd class="cons-t-custo"></dd></div>
+        <div class="cons-total-tempo"><dt>Tempo total</dt><dd class="cons-t-tempo"></dd></div>
+      </dl>
+      <div class="cons-acoes">
+        <button type="button" class="cons-esvaziar"><i class="fas fa-trash"></i> Esvaziar</button>
+        <button type="button" class="cons-concluir"><i class="fas fa-hammer"></i> Concluir construção</button>
+      </div>
+    </footer>
+    {{/if}}
+  </section>
+
+  <section class="cons-prefs" data-painel="prefs" {{#if abaPlano}}hidden{{/if}}>
+    <div class="cons-prefs-corpo">
+      <p class="cons-dica">Salvas nesta ficha. Valem para os próximos itens adicionados; o que já está na lista não muda.</p>
+
+      <div class="cons-prefs-gerais">
+        <div class="cons-campo cons-par"><span>Reduzir tempo</span>
+          <div>
+            <input type="number" data-geral="reducaoValor" min="0" step="any" value="{{prefs.reducaoValor}}" aria-label="Redução padrão do tempo">
+            <select data-geral="reducaoUnidade" aria-label="Unidade da redução padrão">
+              {{#each prefs.opcoesReducao}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="cons-marcas cons-prefs-marcas">
+        <label><input type="checkbox" data-geral="rolarTestes" {{#if prefs.rolarTestes}}checked{{/if}}> Rolar os testes ao concluir</label>
+        <label data-tooltip="Em caso de falha o tempo é sempre gasto. Desmarcado, o material não é cobrado.">
+          <input type="checkbox" data-geral="falhaGastaMaterial" {{#if prefs.falhaGastaMaterial}}checked{{/if}}> Falha gasta o material
+        </label>
+        <label><input type="checkbox" data-geral="loteConsumivel" {{#if prefs.loteConsumivel}}checked{{/if}}> Consumíveis já com –5 para mais unidades</label>
+        <label>Multiplicador de doses <select data-geral="multDoses" aria-label="Multiplicador de doses">{{#each prefs.opcoesMult}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select></label>
+      </div>
+
+      <div class="cons-campo">
+        <span>Instrumentos de ofício que possuo (sem eles, –5 no teste)</span>
+        <div class="cons-marcas cons-prefs-marcas">
+          {{#each prefs.instrumentos}}
+          <label><input type="checkbox" data-instrumento="{{chave}}" {{#if tem}}checked{{/if}}> {{rotulo}}</label>
+          {{/each}}
+        </div>
+      </div>
+
+      <table class="cons-tabela">
+        <thead>
+          <tr><th>Categoria</th><th>Teste</th><th>CD</th><th>Fração</th><th>Tempo</th></tr>
+        </thead>
+        <tbody>
+          {{#each prefs.categorias}}
+          <tr>
+            <th scope="row">{{nome}}</th>
+            <td>
+              <select data-cat="{{id}}" data-campo="oficio" aria-label="Teste de {{nome}}">
+                {{#each opcoesOficio}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+              </select>
+            </td>
+            <td {{#if usaPm}}data-tooltip="Somada ao custo em PM da magia"{{/if}}>
+              <input type="number" data-cat="{{id}}" data-campo="cd" min="0" value="{{cd}}" placeholder="?" aria-label="CD de {{nome}}">
+            </td>
+            <td>
+              <select data-cat="{{id}}" data-campo="fracao" aria-label="Fração de {{nome}}">
+                {{#each opcoesFracao}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+              </select>
+            </td>
+            <td class="cons-par">
+              <div>
+                <input type="number" data-cat="{{id}}" data-campo="tempoValor" min="0" step="any" value="{{tempoValor}}" aria-label="Tempo de {{nome}}">
+                <select data-cat="{{id}}" data-campo="tempoUnidade" aria-label="Unidade do tempo de {{nome}}">
+                  {{#each opcoesTempo}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+                </select>
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <p class="cons-dica">A fração e o tempo de "Superiores e mágicos" valem para todo item superior ou mágico que não seja consumível. Sobre a CD desses itens somam-se +5 por melhoria e +10/+15/+20 para 1/2/3 encantos.</p>
+    </div>
+    <footer class="cons-rodape cons-rodape-prefs">
+      <button type="button" class="cons-restaurar"><i class="fas fa-undo"></i> Restaurar padrões</button>
+    </footer>
+  </section>
+</div>

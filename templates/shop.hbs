@@ -27,12 +27,14 @@
     <span class="wealth-coin silver">{{wealth.tp}} <abbr title="Tibar de Prata">TP</abbr></span>
     <span class="wealth-coin copper">{{wealth.tc}} <abbr title="Tibar de Cobre">TC</abbr></span>
     <span class="wealth-total">(= {{wealth.totalSilver}} TP total)</span>
+    {{#unless construcao}}
     <button type="button" class="btn-open-upgrade" title="Aprimorar um item do inventário ou comprar um item superior/encantado">
       <i class="fas fa-hammer-crash"></i> Itens Superiores e Encantados
     </button>
     <button type="button" class="btn-open-cart" title="Abrir carrinho">
       <i class="fas fa-shopping-cart"></i>
     </button>
+    {{/unless}}
   </div>
 
   {{!-- ── Filtros ── --}}
@@ -43,7 +45,7 @@
           <i class="fas fa-store"></i>
           <span>Comprar</span>
         </button>
-        <button class="mode-btn {{#if (eq mode "sell")}}active{{/if}}" data-mode="sell" title="Vender">
+        <button class="mode-btn {{#if (eq mode "sell")}}active{{/if}}" data-mode="sell" title="Vender" {{#if construcao}}disabled{{/if}}>
           <i class="fas fa-hand-holding-usd"></i>
           <span>Vender</span>
         </button>
@@ -70,15 +72,28 @@
     {{#if (eq mode "buy")}}
       <div class="shop-filters-row shop-filters-row-options">
         <div class="filter-group shop-affordable-toggle">
+          {{#unless construcao}}
           <label class="checkbox">
             <input type="checkbox" class="shop-affordable-only" {{#if affordableOnly}}checked{{/if}}>
             <span>Somente itens que posso comprar</span>
           </label>
+          {{/unless}}
           <label class="checkbox">
             <input type="checkbox" class="shop-hide-spells" {{#if hideSpells}}checked{{/if}}>
             <span>Não exibir magias</span>
           </label>
+          <label class="checkbox" title="Monta uma lista de itens para construir, com custo, tempo e testes. Enquanto estiver marcado, a loja só constrói.">
+            <input type="checkbox" class="shop-modo-construcao" {{#if construcao}}checked{{/if}}>
+            <span>Planejar construção</span>
+          </label>
+          {{#if construcao}}
+          <label class="checkbox" title="Esconde as magias que esta ficha não conhece. Os demais itens continuam na lista.">
+            <input type="checkbox" class="shop-so-minhas-magias" {{#if soMinhasMagias}}checked{{/if}}>
+            <span>Só exibir magias que possuo</span>
+          </label>
+          {{/if}}
         </div>
+        {{#unless construcao}}
         <div class="filter-group sell-percent-group buy-percent-group">
           <label>Preço</label>
           <button type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
@@ -87,6 +102,7 @@
           <input type="number" class="shop-buy-percent-input" min="0" max="200" step="1" value="{{buyPercent}}">
           <span class="sell-percent-label">%</span>
         </div>
+        {{/unless}}
       </div>
     {{/if}}
 

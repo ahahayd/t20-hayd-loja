@@ -24,6 +24,12 @@
                 <button class="btn-sell" data-item-id="{{itemId}}" title="Vender {{name}}">
                   <i class="fas fa-hand-holding-usd"></i>
                 </button>
+              {{else if ../construcao}}
+                <div class="buy-actions">
+                  <button class="{{#if isSpell}}btn-craft-spell{{else}}btn-craft{{/if}}" data-uuid="{{uuid}}" title="Adicionar {{name}} à construção">
+                    <i class="fas fa-hammer"></i>
+                  </button>
+                </div>
               {{else if isSpell}}
                 <div class="buy-actions">
                   <button class="btn-buy-spell {{#unless canAfford}}disabled{{/unless}}"
