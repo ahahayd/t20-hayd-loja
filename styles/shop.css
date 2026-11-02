@@ -109,6 +109,36 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 .wealth-coin.copper { color: #8a5424; }
 .wealth-total { font-size: 0.8em; opacity: 0.7; font-style: italic; }
 
+/* ── Barra de estoque (mercador) ─────────────────────────── */
+.shop-estoque-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+}
+.shop-estoque-bar select { width: auto; flex: 0 1 220px; }
+.shop-estoque-bar button {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+.estoque-dica { font-size: 0.85em; opacity: 0.7; font-style: italic; }
+.item-estoque {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 0.75em;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 3px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
 /* ── Barra de filtros ────────────────────────────────────── */
 /* Duas linhas EXPLÍCITAS (não dependem de flex-wrap para se agrupar
    corretamente): a de cima com modo/busca/ordenação/contagem, a de baixo
@@ -1037,6 +1067,10 @@ ul.currency li.t20-loja-atalho > a:focus-visible {
 .tema-hayd .wealth-coin.silver { color: #c0c0d0; }
 .tema-hayd .wealth-coin.copper { color: #cd7f32; }
 .tema-hayd .wealth-total { color: var(--loja-texto-fraco); }
+.tema-hayd .shop-estoque-bar { background: var(--loja-vidro); border-color: var(--loja-borda); }
+.tema-hayd .shop-estoque-bar i { color: var(--loja-destaque-claro); }
+.tema-hayd .estoque-dica,
+.tema-hayd .item-estoque { color: var(--loja-texto-fraco); border-color: var(--loja-borda); }
 
 /* Inputs e selects */
 .t20-loja-window.tema-hayd input[type="text"],

@@ -53,6 +53,16 @@ Opcionalmente, mudanças de dinheiro nas fichas são anunciadas no chat em cards
 
 Em *Configurar → Configurações → T20 Hayd Loja → Configurar Fontes da Loja*: incluir os compêndios do sistema, os itens do mundo, compêndios adicionais e itens individuais por UUID.
 
+### Estoque por mercador (Mestre)
+
+Por padrão a loja não tem limite de estoque. Para campanhas de escassez, em que cada lugar vende só o que tem:
+
+1. Crie um ator para o mercador e coloque no inventário dele os itens à venda, com a quantidade de cada um.
+2. Na aba **Atores**, clique com o botão direito nele e escolha **Tornar mercador da loja**.
+3. No topo da loja, em **Estoque**, escolha o mercador (ou **Loja geral** para voltar ao catálogo sem limite).
+
+Enquanto um mercador estiver ativo, a vitrine de todos os jogadores mostra só o inventário dele, com o estoque de cada item. Comprar tira as unidades do inventário do mercador (o que esgota some da vitrine) e vender põe o item no inventário dele, à venda para os outros. Para repor, basta editar a ficha do mercador. Os jogadores não precisam de permissão na ficha do mercador, mas um Mestre precisa estar conectado para as compras e vendas com ele.
+
 ## Detalhes adicionais
 
 - Mensagens de compra no chat são opcionais e podem ser sussurradas apenas ao Mestre.

@@ -6,6 +6,7 @@
 import './hayd-ui-base.mjs';
 import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache, moedasChips, cartaoLoja, linhaCartao, atorUsaPlatina } from './shop-app.js';
 import { ShopSettingsApplication } from './settings-app.js';
+import { registrarEstoque, registrarSocketEstoque } from './estoque.mjs';
 
 export const MODULE_ID = 't20-hayd-loja';
 
@@ -386,6 +387,10 @@ Hooks.once('init', () => {
     onChange: () => rerenderJanelasLoja(),
   });
 
+  // Estoque por mercador: configuração "mercadorAtivo", menu de contexto
+  // dos atores e atualização das vitrines (ver estoque.mjs).
+  registrarEstoque();
+
   // Se deve incluir compêndios do sistema automaticamente
   game.settings.register(MODULE_ID, 'includeSystemPacks', {
     name: 'Incluir Compêndios do Sistema',
@@ -539,6 +544,7 @@ async function adicionarCompendiosAutomaticos() {
 }
 
 Hooks.once('ready', async () => {
+  registrarSocketEstoque();
   try { await adicionarCompendiosAutomaticos(); }
   catch (err) { console.warn(`${MODULE_ID} | Falha ao detectar compêndios de módulos`, err); }
   // Não bloqueia o carregamento do mundo: aquece o cache em segundo plano

@@ -1,11 +1,16 @@
           {{#each items}}
           <tr class="shop-item-row {{#if (eq ../mode "buy")}}{{#unless canAfford}}cannot-afford{{/unless}}{{/if}}">
             <td class="col-img">
+              {{#if ../estoqueLimitado}}
+              <img class="shop-item-img" src="{{img}}" alt="{{name}}" loading="lazy" draggable="false">
+              {{else}}
               <img class="shop-item-img" src="{{img}}" alt="{{name}}" loading="lazy"
                    data-uuid="{{uuid}}" draggable="true" title="Arrastar para cena/ficha">
+              {{/if}}
             </td>
             <td class="col-name">
-              <span class="shop-item-name" title="Clique para abrir o item" data-uuid="{{uuid}}">{{name}}</span>
+              <span class="shop-item-name" title="Clique para abrir o item" data-uuid="{{#if fichaUuid}}{{fichaUuid}}{{else}}{{uuid}}{{/if}}">{{name}}</span>
+              {{#if estoque}}<span class="item-estoque" title="Unidades em estoque">Estoque: {{estoque}}</span>{{/if}}
               {{#if source}}<span class="item-source">{{source}}</span>{{/if}}
             </td>
             <td class="col-type"><span class="type-badge" data-tipo="{{typeKey}}">{{typeLabel}}</span></td>
@@ -50,9 +55,11 @@
                   <button class="btn-cart" data-uuid="{{uuid}}" title="Adicionar ao carrinho">
                     <i class="fas fa-cart-plus"></i>
                   </button>
+                  {{#unless ../estoqueLimitado}}
                   <button class="btn-craft" data-uuid="{{uuid}}" title="Construir {{name}}">
                     <i class="fas fa-hammer"></i>
                   </button>
+                  {{/unless}}
                 </div>
               {{/if}}
             </td>

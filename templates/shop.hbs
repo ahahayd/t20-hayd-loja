@@ -35,6 +35,32 @@
     </button>
   </div>
 
+  {{!-- ── Estoque: loja geral (sem limite) ou inventário de um mercador ── --}}
+  {{#if estoque.mostrar}}
+  <div class="shop-estoque-bar">
+    <i class="fas fa-warehouse"></i>
+    {{#if estoque.podeEscolher}}
+      <label>Estoque</label>
+      <select class="shop-estoque-select" title="De onde vêm os itens à venda">
+        <option value="" {{#unless estoque.ativoId}}selected{{/unless}}>Loja geral (sem limite)</option>
+        {{#each estoque.mercadores}}
+        <option value="{{id}}" {{#if ativo}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+      {{#if estoque.ativoId}}
+      <button type="button" class="btn-estoque-ficha" title="Abrir a ficha do mercador para repor ou mudar o estoque">
+        <i class="fas fa-user-edit"></i>
+      </button>
+      {{/if}}
+      {{#unless estoque.mercadores.length}}
+      <span class="estoque-dica">Para limitar o estoque, clique com o botão direito num ator na aba Atores e escolha "Tornar mercador da loja".</span>
+      {{/unless}}
+    {{else}}
+      <span>Negociando com <strong>{{estoque.nome}}</strong>: só o que ele tem em estoque.</span>
+    {{/if}}
+  </div>
+  {{/if}}
+
   {{!-- ── Filtros ── --}}
   <div class="shop-filters">
     <div class="shop-filters-row shop-filters-row-top">
@@ -304,7 +330,11 @@
       <div class="shop-empty">
         <i class="fas fa-store-slash fa-3x"></i>
         <p>Nenhum item encontrado{{#if search}} para "<em>{{search}}</em>"{{/if}}.</p>
+        {{#if estoqueLimitado}}
+        <p class="hint">{{#if (eq mode "buy")}}{{estoque.nome}} não tem mais itens à venda, ou nenhum passa nos filtros.{{else}}Verifique os filtros.{{/if}}</p>
+        {{else}}
         <p class="hint">Verifique os filtros ou configure os compêndios nas Configurações do Módulo.</p>
+        {{/if}}
       </div>
     {{/if}}
 

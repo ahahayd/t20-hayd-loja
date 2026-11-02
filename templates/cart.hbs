@@ -35,7 +35,7 @@
               {{/if}}
             </td>
             <td class="col-qty">
-              <input type="number" class="cart-qty-input" data-key="{{key}}" min="1" value="{{qty}}">
+              <input type="number" class="cart-qty-input" data-key="{{key}}" min="1" {{#if estoque}}max="{{estoque}}"{{/if}} value="{{qty}}">
             </td>
             <td class="col-price">{{lineDisplay}}</td>
             <td class="col-action">

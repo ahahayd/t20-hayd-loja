@@ -140,6 +140,20 @@
 .tema-tenda .wealth-coin.copper { color: #e09a62; }
 .tema-tenda .wealth-total { color: var(--t-creme-fraco); opacity: 1; }
 
+/* Estoque: mais uma tábua entre o saldo e os filtros, sem pregos — a
+   moldura de quatro pregos continua fechando o conjunto. */
+.tema-tenda .shop-estoque-bar {
+  padding: 3px 26px;
+  border-left: 1px solid var(--t-escuro);
+  border-right: 1px solid var(--t-escuro);
+  border-bottom: 0;
+  color: var(--t-creme);
+  background-image: var(--t-tabua);
+  background-size: 320px 200px;
+}
+.tema-tenda .shop-estoque-bar i { color: var(--t-latao); }
+.tema-tenda .estoque-dica { color: var(--t-creme-fraco); opacity: 1; }
+
 /* ── Controles do balcão ─────────────────────────────────────
    Botões = couro com aro de latão; campos = pergaminho embutido
    na madeira. Forma e tamanho continuam os do Foundry. */
@@ -402,6 +416,7 @@
 .tema-tenda .shop-item-name { color: var(--t-tinta); }
 .tema-tenda .shop-item-name:hover { text-shadow: 0 0 7px rgba(157, 32, 38, 0.55); }
 .tema-tenda .item-source { color: var(--t-tinta-fraca); }
+.tema-tenda .item-estoque { color: var(--t-tinta-fraca); border-color: var(--t-tinta-fraca); }
 /* Etiqueta "Tipo": a bandeirinha de assets/icons/bandeira-*.svg, uma cor
    por família de item (a família vem de typeKey, em scripts/shop-app.js).
 

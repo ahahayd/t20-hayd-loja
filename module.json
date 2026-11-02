@@ -40,6 +40,7 @@
     }
   ],
   "flags": {},
+  "socket": true,
   "url": "https://github.com/ahahayd/t20-hayd-loja",
   "manifest": "https://github.com/ahahayd/t20-hayd-loja/releases/latest/download/module.json",
   "download": "https://github.com/ahahayd/t20-hayd-loja/releases/download/v1.7.1/module.zip",

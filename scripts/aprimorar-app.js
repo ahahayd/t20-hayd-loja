@@ -287,6 +287,10 @@ export class AprimorarApplication extends Application {
   }
 
   async _dadosEscolha(catalogo) {
+    // Com estoque de mercador, "Da loja" sairia do catálogo sem limite:
+    // fica só o inventário (compra-se o item na vitrine e aprimora-se aqui).
+    const lojaBloqueada = !!this.shopApp?._mercador?.();
+    if (lojaBloqueada) this._fonte = 'inventario';
     let linhas;
     if (this._fonte === 'inventario') {
       linhas = this.actor.items
@@ -310,7 +314,7 @@ export class AprimorarApplication extends Application {
         .map(i => ({ id: i.uuid, nome: i.name, img: i.img, preco: i.preco, qtd: 1, badge: '' }));
     }
     linhas.sort((a, b) => a.nome.localeCompare(b.nome));
-    return { etapa: 'escolher', fonte: this._fonte, linhas };
+    return { etapa: 'escolher', fonte: this._fonte, linhas, lojaBloqueada };
   }
 
   _dadosConfig(catalogo) {
@@ -467,7 +471,9 @@ export class AprimorarApplication extends Application {
     return `
       <div class="apr-abas">
         <button type="button" data-fonte="inventario" class="${data.fonte === 'inventario' ? 'active' : ''}"><i class="fas fa-suitcase"></i> Meu inventário</button>
-        <button type="button" data-fonte="loja" class="${data.fonte === 'loja' ? 'active' : ''}"><i class="fas fa-store"></i> Da loja</button>
+        <button type="button" data-fonte="loja" class="${data.fonte === 'loja' ? 'active' : ''}"${data.lojaBloqueada
+          ? ' disabled title="A loja está usando o estoque de um mercador: compre o item na vitrine e aprimore-o pelo inventário."'
+          : ''}><i class="fas fa-store"></i> Da loja</button>
       </div>
       <input type="text" class="apr-busca" placeholder="Buscar item…" />
       <ul class="apr-lista">${linhas || `<li class="apr-vazio">${vazio}</li>`}</ul>

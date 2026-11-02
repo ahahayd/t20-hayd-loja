@@ -16,6 +16,10 @@ import { MODULE_ID, aplicarTemaLoja, botoesCabecalhoComTema, pisoDaJanela, obser
 import { AprimorarApplication } from './aprimorar-app.js';
 import { agitarLamparina } from './lamparina.mjs';
 import { ehV14 } from './versao.mjs';
+import {
+  mercadorAtivo, idMercadorAtivo, listarMercadores, itemVendavelDoEstoque, quantidadeEmEstoque,
+  retirarDoEstoque, depositarNoEstoque, entregarItem,
+} from './estoque.mjs';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -888,7 +892,7 @@ export class ShopApplication extends Application {
     const items = list.slice(0, this._visibleCount).map(decorate);
 
     // Coleta tipos únicos para o filtro
-    const types = [...new Set(this._allItems.map(i => i.type))]
+    const types = [...new Set(this._itensDisponiveis().map(i => i.type))]
       .sort()
       .map(t => ({ value: t, label: typeLabel(t) }));
 
@@ -909,6 +913,59 @@ export class ShopApplication extends Application {
       hideSpells : this._hideSpells,
       filterMatch: this._filterMatch,
       hasMore    : list.length > items.length,
+      estoque    : this._dadosEstoque(),
+      estoqueLimitado: !!this._mercador(),
+    };
+  }
+
+  /* ── Estoque por mercador (ver estoque.mjs) ── */
+
+  /** Mercador cujo estoque a vitrine usa, ou null (catálogo sem limite). */
+  _mercador() {
+    const mercador = mercadorAtivo();
+    // Abrir a loja PARA o próprio mercador não o faz comprar de si mesmo.
+    return mercador && mercador.id !== this.actor?.id ? mercador : null;
+  }
+
+  /** Itens do inventário do mercador, no formato das linhas da vitrine. */
+  _itensDoEstoque(mercador) {
+    return mercador.items.filter(itemVendavelDoEstoque).map(item => ({
+      ...formatItem(item),
+      // formatItem multiplica pela qtd (o estoque, aqui): o peso é por unidade
+      espacos      : Number(item.system?.espacos) || 0,
+      estoque      : quantidadeEmEstoque(item),
+      estoqueItemId: item.id,
+      mercadorId   : mercador.id,
+      // A ficha do item no inventário do mercador pode ser fechada para o
+      // jogador; a de origem (compêndio) costuma estar aberta.
+      fichaUuid    : item.getFlag(MODULE_ID, 'sourceUuid') || item.uuid,
+    }));
+  }
+
+  /** O que pode ser comprado agora: o estoque do mercador ou o catálogo. */
+  _itensDisponiveis() {
+    const mercador = this._mercador();
+    return mercador ? this._itensDoEstoque(mercador) : this._allItems;
+  }
+
+  _buscarItem(uuid) {
+    return this._itensDisponiveis().find(i => i.uuid === uuid);
+  }
+
+  /** Barra de estoque no topo da vitrine. */
+  _dadosEstoque() {
+    const ativo = this._mercador();
+    const isGM = !!game.user?.isGM;
+    return {
+      mostrar     : isGM || !!ativo,
+      podeEscolher: isGM,
+      ativoId     : ativo?.id ?? '',
+      nome        : ativo?.name ?? '',
+      mercadores  : isGM
+        ? listarMercadores()
+          .filter(m => m.id !== this.actor?.id)
+          .map(m => ({ id: m.id, name: m.name, ativo: m.id === ativo?.id }))
+        : [],
     };
   }
 
@@ -919,7 +976,7 @@ export class ShopApplication extends Application {
     return JSON.stringify([
       this._mode, this._search, this._typeFilter, this._sortBy,
       this._hideSpells, this._affordableOnly, this._buyPercent, this._sellPercent,
-      this._filterMatch, Array.from(this._filterTags).sort(),
+      this._filterMatch, Array.from(this._filterTags).sort(), idMercadorAtivo(),
     ]);
   }
 
@@ -984,6 +1041,7 @@ export class ShopApplication extends Application {
       const html = await render(`modules/${MODULE_ID}/templates/shop-rows.hbs`, {
         items: fatia,
         mode : this._mode,
+        estoqueLimitado: !!this._mercador(),
       });
       tbody.append(html);
       this._visibleCount = inicio + fatia.length;
@@ -1449,6 +1507,9 @@ export class ShopApplication extends Application {
    * cada tecla digitada.
    */
   _getSortedAll() {
+    // Estoque de mercador: lista pequena e viva, ordenada a cada vez
+    const fonte = this._itensDisponiveis();
+    if (fonte !== this._allItems) return this._applySort(fonte);
     const c = this._sortedCache;
     if (c && c.source === this._allItems && c.key === this._sortBy) return c.items;
     const items = this._applySort(this._allItems);
@@ -1469,7 +1530,7 @@ export class ShopApplication extends Application {
 
   /* ── Compra ──────────────────────────────────── */
   async _purchaseItem(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._buscarItem(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     let qty = 1;
@@ -1477,7 +1538,7 @@ export class ShopApplication extends Application {
       const chosen = await this._promptQuantity({
         title: `Comprar ${shopItem.name}`,
         unitPrice: shopItem.preco,
-        max: 999,
+        max: shopItem.estoque ?? 999,
         percent: 1,
         label: 'Selecione a quantidade para compra.',
       });
@@ -1499,33 +1560,47 @@ export class ShopApplication extends Application {
     // Calcula novo saldo (troco realista quando ativado)
     const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
-    // Busca documento original para copiar dados
-    let sourceDoc;
-    try {
-      sourceDoc = await fromUuid(uuid);
-    } catch (e) {
-      return ui.notifications.error(`Não foi possível carregar o item: ${uuid}`);
-    }
-
-    if (!sourceDoc) return ui.notifications.error('Item não encontrado no compêndio.');
-
-    // Verifica se o ator já possui o item (mesma origem)
-    const existing = this.actor.items.find(i => {
-      if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
-      const flag = i.getFlag(MODULE_ID, 'sourceUuid');
-      return flag === uuid || i.name === sourceDoc.name;
-    });
-
-    if (existing && existing.system?.qtd !== undefined) {
-      // Incrementa quantidade
-      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
+    const mercador = shopItem.mercadorId ? game.actors.get(shopItem.mercadorId) : null;
+    if (shopItem.mercadorId) {
+      // Estoque de mercador: as unidades saem do inventário dele. Se outro
+      // jogador levou antes, a retirada falha e nada é cobrado.
+      let dados;
+      try {
+        [dados] = await retirarDoEstoque(shopItem.mercadorId, [{ itemId: shopItem.estoqueItemId, qtd: qty }]);
+      } catch (e) {
+        this.render();
+        return ui.notifications.warn(e.message);
+      }
+      await entregarItem(this.actor, dados, qty);
     } else {
-      // Cria novo item
-      const itemData = sourceDoc.toObject();
-      itemData.system.qtd = qty;
-      const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
-      // Marca a origem para futura detecção de duplicatas
-      if (created) await created.setFlag(MODULE_ID, 'sourceUuid', uuid);
+      // Busca documento original para copiar dados
+      let sourceDoc;
+      try {
+        sourceDoc = await fromUuid(uuid);
+      } catch (e) {
+        return ui.notifications.error(`Não foi possível carregar o item: ${uuid}`);
+      }
+
+      if (!sourceDoc) return ui.notifications.error('Item não encontrado no compêndio.');
+
+      // Verifica se o ator já possui o item (mesma origem)
+      const existing = this.actor.items.find(i => {
+        if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
+        const flag = i.getFlag(MODULE_ID, 'sourceUuid');
+        return flag === uuid || i.name === sourceDoc.name;
+      });
+
+      if (existing && existing.system?.qtd !== undefined) {
+        // Incrementa quantidade
+        await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
+      } else {
+        // Cria novo item
+        const itemData = sourceDoc.toObject();
+        itemData.system.qtd = qty;
+        const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
+        // Marca a origem para futura detecção de duplicatas
+        if (created) await created.setFlag(MODULE_ID, 'sourceUuid', uuid);
+      }
     }
 
     // Atualiza dinheiro
@@ -1535,11 +1610,12 @@ export class ShopApplication extends Application {
       'system.dinheiro.tc': newTc,
     }, { t20lojaInterno: true });
 
+    const ondeComprou = mercador ? `de ${mercador.name}` : 'na loja';
     const messageContent = cartaoLoja({
       icone: 'fa-shopping-bag',
       titulo: this._buyPercent === 100
-        ? 'comprou na loja'
-        : `comprou na loja (${this._buyPercent}% do preço)`,
+        ? `comprou ${ondeComprou}`
+        : `comprou ${ondeComprou} (${this._buyPercent}% do preço)`,
       ator: this.actor.name,
       corpo: `
         <div class="t20l-item"><img src="${shopItem.img}" alt="" />${shopItem.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
@@ -1665,6 +1741,20 @@ export class ShopApplication extends Application {
     // Modo realista: recebe as moedas em espécie, sem normalizar a carteira
     const { to: newTo, tp: newTp, tc: newTc } = creditarCarteira(wealth, sellCopper);
 
+    // Estoque de mercador: o item vendido entra no inventário dele (e fica
+    // à venda para os outros). Primeiro o depósito: se falhar, o vendedor
+    // não perde o item.
+    const mercador = this._mercador();
+    if (mercador) {
+      const dados = item.toObject();
+      delete dados._id;
+      try {
+        await depositarNoEstoque(mercador.id, dados, sellQty);
+      } catch (e) {
+        return ui.notifications.warn(e.message);
+      }
+    }
+
     if (sellQty >= qtd) {
       await item.delete();
     } else {
@@ -1682,7 +1772,9 @@ export class ShopApplication extends Application {
       : null;
     const messageContent = cartaoLoja({
       icone: 'fa-hand-holding-usd',
-      titulo: `vendeu (${Math.round(percent * 100)}% do valor)`,
+      titulo: mercador
+        ? `vendeu a ${mercador.name} (${Math.round(percent * 100)}% do valor)`
+        : `vendeu (${Math.round(percent * 100)}% do valor)`,
       ator: this.actor.name,
       corpo: `
         <div class="t20l-item"><img src="${item.img}" alt="" />${item.name}${sellQty > 1 ? ` <em>×${sellQty}</em>` : ''}</div>
@@ -1705,16 +1797,23 @@ export class ShopApplication extends Application {
   }
 
   async _addToCart(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._buscarItem(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
     if (shopItem.isSpell) return this._addSpellToCart(uuid);
+
+    // Estoque de mercador: o carrinho não passa do que ele tem
+    const noCarrinho = this._cartItems.get(uuid)?.qty ?? 0;
+    const restante = (shopItem.estoque ?? Infinity) - noCarrinho;
+    if (restante <= 0) {
+      return ui.notifications.warn(`Todo o estoque de "${shopItem.name}" já está no carrinho.`);
+    }
 
     let qty = 1;
     if (isConsumableType(shopItem.type, shopItem.system ?? {})) {
       const chosen = await this._promptQuantity({
         title: `Adicionar ${shopItem.name} ao carrinho`,
         unitPrice: shopItem.preco,
-        max: 999,
+        max: Math.min(999, restante),
         percent: 1,
         label: 'Selecione a quantidade para o carrinho.',
       });
@@ -1733,6 +1832,9 @@ export class ShopApplication extends Application {
         img: shopItem.img,
         preco: shopItem.preco,
         qty,
+        mercadorId: shopItem.mercadorId,
+        estoqueItemId: shopItem.estoqueItemId,
+        estoque: shopItem.estoque,
       });
     }
 
@@ -1741,7 +1843,7 @@ export class ShopApplication extends Application {
 
   /** Adiciona uma magia (poção/pergaminho já configurados) ao carrinho. */
   async _addSpellToCart(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._buscarItem(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const config = await this._configureSpellPurchase(shopItem, { cart: true });
@@ -2249,6 +2351,15 @@ export class ShopApplication extends Application {
       this._openCart();
     });
 
+    // Estoque: o mestre escolhe o mercador (ou a loja geral)
+    html.find('.shop-estoque-select').on('change', ev => {
+      if (!game.user?.isGM) return;
+      game.settings.set(MODULE_ID, 'mercadorAtivo', ev.currentTarget.value || '');
+    });
+    html.find('.btn-estoque-ficha').on('click', () => {
+      this._mercador()?.sheet?.render(true);
+    });
+
     html.find('.btn-open-upgrade').on('click', () => {
       this._openUpgradeDialog();
     });
@@ -2295,6 +2406,9 @@ export class ShopApplication extends Application {
 
     // Drag de item (para arrastar para fichas, cenas, etc.)
     html.find('.shop-items-list').on('dragstart', '.shop-item-img', ev => {
+      // Arrastar do estoque de um mercador copiaria o item sem pagar nem
+      // tirar do estoque: lá o arraste fica desligado.
+      if (this._mercador()) return ev.preventDefault();
       const uuid = ev.currentTarget.dataset.uuid;
       ev.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({ type: 'Item', uuid }));
     });
@@ -2364,7 +2478,7 @@ class CartApplication extends Application {
       const key = ev.currentTarget.dataset.key;
       const item = this.shopApp._cartItems.get(key);
       if (!item) return;
-      const value = Math.max(1, Number(ev.currentTarget.value) || 1);
+      const value = Math.min(item.estoque ?? Infinity, Math.max(1, Number(ev.currentTarget.value) || 1));
       item.qty = value;
       ev.currentTarget.value = value;
     });
@@ -2427,11 +2541,44 @@ class CartApplication extends Application {
       return ui.notifications.warn('Moedas insuficientes para finalizar a compra.');
     }
 
+    /* Estoque por mercador: o carrinho só vale para a origem atual. Se o
+     * mestre trocou de mercador (ou voltou à loja geral) depois que os
+     * itens entraram, eles saem do carrinho antes de cobrar qualquer coisa. */
+    const origemAtual = this.shopApp._mercador()?.id ?? '';
+    const foraDaOrigem = items.filter(i => (i.mercadorId ?? '') !== origemAtual);
+    if (foraDaOrigem.length) {
+      for (const i of foraDaOrigem) this.shopApp._cartItems.delete(i.key);
+      this.render();
+      return ui.notifications.warn('O estoque da loja mudou: itens que não estão mais à venda saíram do carrinho. Confira e finalize de novo.');
+    }
+
+    // Tudo ou nada: se faltar qualquer item no estoque, nada é retirado nem cobrado
+    const doEstoque = items.filter(i => i.mercadorId);
+    let retirados = [];
+    if (doEstoque.length) {
+      try {
+        retirados = await retirarDoEstoque(origemAtual, doEstoque.map(i => ({ itemId: i.estoqueItemId, qtd: i.qty })));
+      } catch (e) {
+        this.shopApp.render();
+        return ui.notifications.warn(e.message);
+      }
+    }
+
     const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
     const purchasedLines = [];
 
     for (const item of items) {
+      if (item.mercadorId) {
+        await entregarItem(this.shopApp.actor, retirados[doEstoque.indexOf(item)], item.qty);
+        purchasedLines.push({
+          name: item.name,
+          qty: item.qty,
+          paid: precoDisplay(item.preco * item.qty * (this._discountPercent / 100)),
+        });
+        continue;
+      }
+
       // O item da magia já foi montado (aprimoramentos gravados nas
       // rolagens) no momento em que foi adicionado ao carrinho — só falta
       // ajustar a quantidade final escolhida aqui.
