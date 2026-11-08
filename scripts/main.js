@@ -328,6 +328,17 @@ Hooks.once('init', () => {
   console.log(`${MODULE_ID} | Inicializando módulo Tormenta20 Loja`);
   registrarTipoMercador();
 
+  // Para outros módulos (o T20 Hayd Mobile abre a loja pelo menu e pela ficha
+  // dele, sem botão de cabeçalho nem tecla P).
+  game.modules.get(MODULE_ID).api = {
+    /** Abre a loja para o ator: pergunta de quem comprar se houver mais de uma. */
+    abrirLoja: (actor) => abrirLojaPara(actor),
+    /** Abre a loja de um Mercador para o personagem do usuário. */
+    abrirLojaDoMercador: (mercador) => abrirLojaDoMercador(mercador),
+    /** O ator é um Mercador (a loja, não um freguês)? */
+    ehMercador: (actor) => ehMercador(actor),
+  };
+
   /* Linhas da tabela da loja: partial usado tanto no render completo quanto
    * na paginação por scroll (que injeta só as linhas novas no tbody). */
   const carregarTemplates = foundry.applications?.handlebars?.loadTemplates ?? loadTemplates;
