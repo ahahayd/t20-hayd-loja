@@ -17,6 +17,10 @@ import { AprimorarApplication } from './aprimorar-app.js';
 import { ConstrucaoApplication } from './construcao-app.js';
 import { agitarLamparina } from './lamparina.mjs';
 import { ehV14 } from './versao.mjs';
+import {
+  configMercador, lojaAberta, itensDoEstoque, itemIlimitado, noCatalogo, pedirAoMercador, caixaEmCobre,
+  mercadoresDisponiveis, qtdEmEstoque, precoDaPeca, origemDaPeca,
+} from './mercador.mjs';
 
 /* ── Mapa de tipos para labels legíveis ─────── */
 const TYPE_LABELS = {
@@ -609,6 +613,13 @@ export function shopItemsCacheReady() {
   return !!ItemCache.items && ItemCache.fingerprint === shopSettingsFingerprint();
 }
 
+/** Texto e tom do estoque de uma linha da vitrine (sem estoque: nada). */
+function estoqueDaLinha(estoque) {
+  if (estoque === undefined || estoque === Infinity) return { estoqueDisplay: null, estoqueClasse: '' };
+  if (estoque <= 1) return { estoqueDisplay: 'última peça', estoqueClasse: 'ultima' };
+  return { estoqueDisplay: `${estoque} em estoque`, estoqueClasse: estoque <= 3 ? 'pouco' : '' };
+}
+
 /** Formata um documento Item para o formato interno da loja. */
 function formatItem(doc) {
   const isSpell = isSpellType(doc.type);
@@ -810,6 +821,13 @@ export class ShopApplication extends Application {
     /** @type {number|null} Timer de debounce da busca */
     this._searchTimer = null;
 
+    /** @type {string|null} Mercador da vitrine (null = loja geral) */
+    this._mercadorId = null;
+    this._hooksMercador = [];
+    const mercadorInicial = options.mercadorId
+      ?? (this._lojaGeralLiberada() ? null : mercadoresDisponiveis()[0]?.ator.id);
+    if (mercadorInicial) this._escolherMercador(mercadorInicial);
+
     this._actorUpdateHook = Hooks.on('updateActor', (updatedActor, data) => {
       if (!this.rendered) return;
       if (updatedActor?.id !== this.actor?.id) return;
@@ -830,6 +848,8 @@ export class ShopApplication extends Application {
     }
     this._lamparina?.destroy();
     this._lamparina = null;
+    for (const [h, id] of this._hooksMercador ?? []) Hooks.off(h, id);
+    this._hooksMercador = [];
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
@@ -920,6 +940,43 @@ export class ShopApplication extends Application {
       hasMore    : list.length > items.length,
       construcao : this._modoConstrucao,
       soMinhasMagias: this._soMinhasMagias,
+      ...this._dadosMercador(),
+    };
+  }
+
+  /** O que o template precisa sobre o mercador da vitrine. */
+  _dadosMercador() {
+    const ator = this.mercador;
+    const cfg = lojaAberta(ator);
+    const geral = this._lojaGeralLiberada();
+    if (!cfg) {
+      return {
+        lojaGeral: geral, semLoja: !geral,
+        // Na loja geral não há balcão: só com um mercador (ou sem loja nenhuma).
+        mostraBalcao: !geral,
+        // Sem mercador, a loja geral oferece superiores como sempre.
+        mostraSuperiores: geral, travaPrecos: false, naoCompra: geral ? null : 'Não há mercador para comprar isto.',
+      };
+    }
+    const d = ator.system?.dinheiro ?? {};
+    return {
+      lojaGeral: geral,
+      semLoja: false,
+      mostraBalcao: true,
+      vazioMercador: this._mode === 'buy',
+      podeConfigurar: ator.isOwner,
+      naoCompra: cfg.aceitaVenda ? null : `${ator.name} não compra itens.`,
+      mercador: {
+        id: ator.id,
+        nome: ator.name,
+        img: ator.img,
+        caixaIlimitado: cfg.caixaIlimitado,
+        caixa: moedasChips({ to: d.to, tp: d.tp, tc: d.tc }, { ocultarZeros: false }),
+        aceitaVenda: cfg.aceitaVenda,
+      },
+      mostraSuperiores: !!cfg.superiores,
+      // O mercador dita o preço: o jogador não mexe no percentual.
+      travaPrecos: !game.user.isGM,
     };
   }
 
@@ -931,6 +988,7 @@ export class ShopApplication extends Application {
       this._mode, this._search, this._typeFilter, this._sortBy,
       this._hideSpells, this._affordableOnly, this._buyPercent, this._sellPercent,
       this._filterMatch, Array.from(this._filterTags).sort(), this._modoConstrucao, this._soMinhasMagias,
+      this._mercadorId,
     ]);
   }
 
@@ -952,8 +1010,12 @@ export class ShopApplication extends Application {
       };
     }
 
-    // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado
-    let filtered = this._applyFilters(this._getSortedAll());
+    // Lista pré-ordenada + filtro (ordem preservada) = mesmo resultado.
+    // Com mercador, a vitrine é só o que ele vende; sem loja liberada, nada.
+    const fonte = this.mercador
+      ? this._itensDoMercador()
+      : (this._lojaGeralLiberada() ? this._getSortedAll() : []);
+    let filtered = this._applyFilters(fonte);
     if (this._hideSpells) filtered = filtered.filter(item => !item.isSpell);
     // O contador sempre reflete o filtro de busca/tipo/tags/magias (como
     // antes, sem considerar o "posso pagar")
@@ -981,6 +1043,8 @@ export class ShopApplication extends Application {
       decorate: item => ({
         ...item,
         canAfford : totalCopper >= custoCobre(item),
+        // Estoque: só o número que importa. Sem fim não precisa de aviso.
+        ...estoqueDaLinha(item.estoque),
         ...(fator !== 1 && !item.isSpell ? { precoDisplay: precoDisplay(item.preco * fator) } : {}),
       }),
     };
@@ -1007,6 +1071,7 @@ export class ShopApplication extends Application {
         items: fatia,
         mode : this._mode,
         construcao: this._modoConstrucao,
+        naoCompra: this._dadosMercador().naoCompra,
       });
       tbody.append(html);
       this._visibleCount = inicio + fatia.length;
@@ -1455,14 +1520,147 @@ export class ShopApplication extends Application {
     return list;
   }
 
-  _applySort(items) {
-    const copy = [...items];
+  _comparador() {
     switch (this._sortBy) {
-      case 'price-asc'  : return copy.sort((a, b) => a.preco - b.preco);
-      case 'price-desc' : return copy.sort((a, b) => b.preco - a.preco);
-      case 'type'       : return copy.sort((a, b) => COLLATOR.compare(a.typeLabel, b.typeLabel) || COLLATOR.compare(a.name, b.name));
-      default           : return copy.sort((a, b) => COLLATOR.compare(a.name, b.name));
+      case 'price-asc'  : return (a, b) => a.preco - b.preco;
+      case 'price-desc' : return (a, b) => b.preco - a.preco;
+      case 'type'       : return (a, b) => COLLATOR.compare(a.typeLabel, b.typeLabel) || COLLATOR.compare(a.name, b.name);
+      default           : return (a, b) => COLLATOR.compare(a.name, b.name);
     }
+  }
+
+  _applySort(items) {
+    return [...items].sort(this._comparador());
+  }
+
+  /* ── Mercador ───────────────────────────────── */
+
+  /** Ator do mercador escolhido, se ainda for mercador. */
+  get mercador() {
+    const ator = this._mercadorId ? game.actors.get(this._mercadorId) : null;
+    return lojaAberta(ator) ? ator : null;
+  }
+
+  /** A loja geral (catálogo inteiro, sem estoque) está liberada para este usuário? */
+  _lojaGeralLiberada() {
+    if (game.user.isGM) return true;
+    try { return game.settings.get(MODULE_ID, 'lojaGeral') !== false; }
+    catch { return true; }
+  }
+
+  /** Troca o mercador da vitrine e aplica os preços dele. */
+  _escolherMercador(id) {
+    const ator = id ? game.actors.get(id) : null;
+    const cfg = lojaAberta(ator);
+    this._mercadorId = cfg ? ator.id : null;
+    if (cfg) {
+      this._buyPercent = cfg.precoCompra;
+      this._sellPercent = Math.max(1, cfg.precoVenda);
+    } else {
+      this._buyPercent = 100;
+      this._sellPercent = 50;
+    }
+    this._cartItems.clear();
+    if (this._cartApp) {
+      this._cartApp._discountPercent = cfg ? this._buyPercent : 100;
+      if (this._cartApp.rendered) this._cartApp.render();
+    }
+    this._ligarHooksMercador();
+  }
+
+  /** Estoque mudou (outra compra, o mestre mexeu): redesenha a vitrine. */
+  _ligarHooksMercador() {
+    for (const [h, id] of this._hooksMercador ?? []) Hooks.off(h, id);
+    this._hooksMercador = [];
+    if (!this._mercadorId) return;
+    const redesenhar = foundry.utils.debounce(() => { if (this.rendered) this.render(); }, 120);
+    const doMercador = doc => (doc?.parent?.id ?? doc?.id) === this._mercadorId;
+    for (const h of ['createItem', 'updateItem', 'deleteItem', 'updateActor']) {
+      this._hooksMercador.push([h, Hooks.on(h, doc => { if (doMercador(doc)) redesenhar(); })]);
+    }
+  }
+
+  /** Linha da vitrine para um item do inventário do mercador. */
+  _linhaDoEstoque(item, precoDe) {
+    const linha = formatItem(item);
+    linha.mercadorItemId = item.id;
+    linha.estoque = qtdEmEstoque(item);
+    // Peça sem preço próprio usa o do catálogo (ver precoDaPeca).
+    linha.preco = precoDe(item);
+    linha.precoDisplay = precoDisplay(linha.preco);
+    // Uma peça da pilha: o peso é o da unidade.
+    linha.espacos = Number(item.system?.espacos) || 0;
+    linha.origemUuid = origemDaPeca(item) ?? item.uuid;
+    return linha;
+  }
+
+  /** Preço de tabela das peças, montado uma vez por catálogo carregado. */
+  _precoDe() {
+    if (this._precoDeCache?.fonte !== this._allItems) {
+      this._precoDeCache = { fonte: this._allItems, fn: precoDaPeca(this._allItems ?? []) };
+    }
+    return this._precoDeCache.fn;
+  }
+
+  /**
+   * O que o mercador vende: o inventário (com estoque) e, se ligado, o
+   * catálogo da comunidade (sem limite). Um item que está no inventário não
+   * se repete pelo catálogo: o do inventário é o que manda.
+   */
+  _itensDoMercador() {
+    const ator = this.mercador;
+    const cfg = lojaAberta(ator);
+    if (!cfg) return [];
+    const precoDe = this._precoDe();
+    // Peça sem preço nenhum (nem no catálogo) não tem como ser vendida.
+    const doEstoque = this._applySort(itensDoEstoque(ator)
+      .map(i => this._linhaDoEstoque(i, precoDe))
+      .filter(l => l.preco > 0));
+    if (!cfg.catalogo?.ativo) return doEstoque;
+
+    const nomes = new Set(doEstoque.map(i => i.searchName));
+    const origens = new Set(doEstoque.map(i => i.origemUuid));
+    const doCatalogo = this._getSortedAll().filter(i =>
+      !origens.has(i.uuid) && !nomes.has(i.searchName) && noCatalogo(cfg, i));
+
+    // As duas listas já estão ordenadas: intercala sem reordenar milhares de itens.
+    const cmp = this._comparador();
+    const saida = [];
+    let a = 0, b = 0;
+    while (a < doEstoque.length || b < doCatalogo.length) {
+      if (b >= doCatalogo.length || (a < doEstoque.length && cmp(doEstoque[a], doCatalogo[b]) <= 0)) saida.push(doEstoque[a++]);
+      else saida.push(doCatalogo[b++]);
+    }
+    return saida;
+  }
+
+  /** "na loja" ou "com <mercador>", para os cartões do chat. */
+  _onde() {
+    return this.mercador ? `com ${this.mercador.name}` : 'na loja';
+  }
+
+  /** Item da vitrine pelo uuid da linha. Com mercador, só o que ele vende. */
+  _itemDaVitrine(uuid) {
+    if (this.mercador) return this._itensDoMercador().find(i => i.uuid === uuid) ?? null;
+    return this._allItems.find(i => i.uuid === uuid);
+  }
+
+  /**
+   * Fecha o lado do mercador ANTES de mexer no personagem: tira as peças do
+   * estoque e entrega o pagamento. Se o mercador recusar, nada acontece.
+   * @param {{itemId?:string, qty:number}[]} linhas
+   * @returns {Promise<boolean>}
+   */
+  async _negociarCompra(linhas, cobre) {
+    const ator = this.mercador;
+    if (!ator) return true;
+    const r = await pedirAoMercador('vender', {
+      mercadorId: ator.id,
+      linhas: linhas.filter(l => l.itemId).map(l => ({ itemId: l.itemId, qty: l.qty })),
+      cobre,
+    });
+    if (!r.ok) ui.notifications.warn(r.erro);
+    return r.ok;
   }
 
   /**
@@ -1490,17 +1688,46 @@ export class ShopApplication extends Application {
     return { to, tp, tc, tl, totalSilver: parseFloat(totalSilver.toFixed(2)) };
   }
 
+  /**
+   * Põe `qty` unidades de `sourceDoc` no inventário do comprador, empilhando
+   * com um item igual que ele já tenha. `origemUuid` é a fonte original
+   * (compêndio), também quando a peça vem da prateleira de um mercador.
+   */
+  async _entregarItem(sourceDoc, origemUuid, qty, preco = 0) {
+    const existing = this.actor.items.find(i => {
+      if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
+      const flag = i.getFlag(MODULE_ID, 'sourceUuid');
+      return flag === origemUuid || i.name === sourceDoc.name;
+    });
+
+    if (existing && existing.system?.qtd !== undefined) {
+      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
+      return;
+    }
+    const itemData = sourceDoc.toObject();
+    delete itemData._id;
+    itemData.system.qtd = qty;
+    // Peça da prateleira sem preço próprio leva o preço de tabela que se pagou.
+    if (!(Number(itemData.system.preco) > 0) && preco > 0) itemData.system.preco = preco;
+    // Marcas de prateleira não viajam com a peça.
+    if (itemData.flags?.[MODULE_ID]) delete itemData.flags[MODULE_ID].ilimitado;
+    foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.sourceUuid`, origemUuid);
+    await this.actor.createEmbeddedDocuments('Item', [itemData]);
+  }
+
   /* ── Compra ──────────────────────────────────── */
   async _purchaseItem(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
+    const estoque = shopItem.estoque ?? Infinity;
+    if (estoque <= 0) return ui.notifications.warn(`${shopItem.name} esgotou.`);
 
     let qty = 1;
-  if (isConsumableType(shopItem.type, shopItem.system ?? {})) {
+    if (isConsumableType(shopItem.type, shopItem.system ?? {})) {
       const chosen = await this._promptQuantity({
         title: `Comprar ${shopItem.name}`,
         unitPrice: shopItem.preco,
-        max: 999,
+        max: Math.min(999, estoque),
         percent: 1,
         label: 'Selecione a quantidade para compra.',
       });
@@ -1532,24 +1759,10 @@ export class ShopApplication extends Application {
 
     if (!sourceDoc) return ui.notifications.error('Item não encontrado no compêndio.');
 
-    // Verifica se o ator já possui o item (mesma origem)
-    const existing = this.actor.items.find(i => {
-      if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
-      const flag = i.getFlag(MODULE_ID, 'sourceUuid');
-      return flag === uuid || i.name === sourceDoc.name;
-    });
+    // O mercador entrega a peça e recebe o pagamento antes de tudo.
+    if (!(await this._negociarCompra([{ itemId: shopItem.mercadorItemId, qty }], costCopper))) return;
 
-    if (existing && existing.system?.qtd !== undefined) {
-      // Incrementa quantidade
-      await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + qty });
-    } else {
-      // Cria novo item
-      const itemData = sourceDoc.toObject();
-      itemData.system.qtd = qty;
-      const [created] = await this.actor.createEmbeddedDocuments('Item', [itemData]);
-      // Marca a origem para futura detecção de duplicatas
-      if (created) await created.setFlag(MODULE_ID, 'sourceUuid', uuid);
-    }
+    await this._entregarItem(sourceDoc, shopItem.origemUuid ?? uuid, qty, shopItem.preco);
 
     // Atualiza dinheiro
     await this.actor.update({
@@ -1561,8 +1774,8 @@ export class ShopApplication extends Application {
     const messageContent = cartaoLoja({
       icone: 'fa-shopping-bag',
       titulo: this._buyPercent === 100
-        ? 'comprou na loja'
-        : `comprou na loja (${this._buyPercent}% do preço)`,
+        ? `comprou ${this._onde()}`
+        : `comprou ${this._onde()} (${this._buyPercent}% do preço)`,
       ator: this.actor.name,
       corpo: `
         <div class="t20l-item"><img src="${shopItem.img}" alt="" />${shopItem.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
@@ -1591,7 +1804,7 @@ export class ShopApplication extends Application {
    * concluída como qualquer outra.
    */
   async _purchaseSpell(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const config = await this._configureSpellPurchase(shopItem);
@@ -1612,6 +1825,9 @@ export class ShopApplication extends Application {
     }
 
     const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
+
+    // Magia vem do catálogo (sem estoque): o mercador só recebe o pagamento.
+    if (!(await this._negociarCompra([], costCopper))) return;
 
     // Dedup: só empilha com um item já comprado com a MESMA configuração
     // (forma + aprimoramentos escolhidos) — uma poção com aprimoramentos
@@ -1637,8 +1853,8 @@ export class ShopApplication extends Application {
     const messageContent = cartaoLoja({
       icone: isPergaminho ? 'fa-scroll' : 'fa-flask',
       titulo: this._buyPercent === 100
-        ? `comprou ${subtipo.toLowerCase()} de magia na loja`
-        : `comprou ${subtipo.toLowerCase()} de magia na loja (${this._buyPercent}% do preço)`,
+        ? `comprou ${subtipo.toLowerCase()} de magia ${this._onde()}`
+        : `comprou ${subtipo.toLowerCase()} de magia ${this._onde()} (${this._buyPercent}% do preço)`,
       ator: this.actor.name,
       corpo: `
         <div class="t20l-item"><img src="${itemData.img}" alt="" />${itemData.name}${qty > 1 ? ` <em>×${qty}</em>` : ''}</div>
@@ -1688,6 +1904,23 @@ export class ShopApplication extends Application {
     // Modo realista: recebe as moedas em espécie, sem normalizar a carteira
     const { to: newTo, tp: newTp, tc: newTc } = creditarCarteira(wealth, sellCopper);
 
+    // O mercador paga do caixa dele e põe a peça na prateleira.
+    const mercador = this.mercador;
+    if (!mercador && !this._lojaGeralLiberada()) return ui.notifications.warn('Não há mercador para comprar isto.');
+    if (mercador) {
+      const cfg = lojaAberta(mercador);
+      if (!cfg.aceitaVenda) return ui.notifications.warn(`${mercador.name} não compra itens.`);
+      if (!cfg.caixaIlimitado && caixaEmCobre(mercador) < sellCopper) {
+        return ui.notifications.warn(`${mercador.name} só tem ${precoDisplay(caixaEmCobre(mercador) / 10)} em caixa: não paga ${precoDisplay(sellCopper / 10)}.`);
+      }
+      const itemData = item.toObject();
+      itemData.system.qtd = sellQty;
+      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.sourceUuid`,
+        item.getFlag(MODULE_ID, 'sourceUuid') ?? item._stats?.compendiumSource ?? item.uuid);
+      const r = await pedirAoMercador('comprar', { mercadorId: mercador.id, itemData, cobre: sellCopper });
+      if (!r.ok) return ui.notifications.warn(r.erro);
+    }
+
     if (sellQty >= qtd) {
       await item.delete();
     } else {
@@ -1705,7 +1938,7 @@ export class ShopApplication extends Application {
       : null;
     const messageContent = cartaoLoja({
       icone: 'fa-hand-holding-usd',
-      titulo: `vendeu (${Math.round(percent * 100)}% do valor)`,
+      titulo: `vendeu${this.mercador ? ` para ${this.mercador.name}` : ''} (${Math.round(percent * 100)}% do valor)`,
       ator: this.actor.name,
       corpo: `
         <div class="t20l-item"><img src="${item.img}" alt="" />${item.name}${sellQty > 1 ? ` <em>×${sellQty}</em>` : ''}</div>
@@ -1728,16 +1961,21 @@ export class ShopApplication extends Application {
   }
 
   async _addToCart(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
     if (shopItem.isSpell) return this._addSpellToCart(uuid);
+    const estoque = shopItem.estoque ?? Infinity;
+    const noCarrinho = this._cartItems.get(uuid)?.qty ?? 0;
+    if (estoque - noCarrinho <= 0) {
+      return ui.notifications.warn(estoque > 0 ? `Todo o estoque de ${shopItem.name} já está no carrinho.` : `${shopItem.name} esgotou.`);
+    }
 
     let qty = 1;
     if (isConsumableType(shopItem.type, shopItem.system ?? {})) {
       const chosen = await this._promptQuantity({
         title: `Adicionar ${shopItem.name} ao carrinho`,
         unitPrice: shopItem.preco,
-        max: 999,
+        max: Math.min(999, estoque - noCarrinho),
         percent: 1,
         label: 'Selecione a quantidade para o carrinho.',
       });
@@ -1756,6 +1994,9 @@ export class ShopApplication extends Application {
         img: shopItem.img,
         preco: shopItem.preco,
         qty,
+        mercadorItemId: shopItem.mercadorItemId,
+        origemUuid: shopItem.origemUuid,
+        estoque,
       });
     }
 
@@ -1764,7 +2005,7 @@ export class ShopApplication extends Application {
 
   /** Adiciona uma magia (poção/pergaminho já configurados) ao carrinho. */
   async _addSpellToCart(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const config = await this._configureSpellPurchase(shopItem, { cart: true });
@@ -1798,7 +2039,7 @@ export class ShopApplication extends Application {
   }
 
   async _craftItem(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const formatCraftCost = costCopper => {
@@ -1895,7 +2136,7 @@ export class ShopApplication extends Application {
    * passando primeiro pela escolha de forma/aprimoramentos das magias.
    */
   async _craftSpell(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const config = await this._configureSpellCraft(shopItem);
@@ -2014,7 +2255,7 @@ export class ShopApplication extends Application {
 
   /** Martelo de magia com a construção ligada: resolve e manda para a lista. */
   async _planejarMagia(uuid) {
-    const shopItem = this._allItems.find(i => i.uuid === uuid);
+    const shopItem = this._itemDaVitrine(uuid);
     if (!shopItem) return ui.notifications.error('Item não encontrado na loja.');
 
     const base = await this._resolveSpellBase(shopItem);
@@ -2343,6 +2584,11 @@ export class ShopApplication extends Application {
       this._openUpgradeDialog();
     });
 
+    html.find('.btn-config-mercador').on('click', () => {
+      const ator = this.mercador;
+      if (ator?.isOwner) ator.sheet.render(true);
+    });
+
     html.find('.side-filter-group').on('toggle', ev => {
       const key = ev.currentTarget.dataset.group;
       if (!key) return;
@@ -2406,7 +2652,8 @@ class CartApplication extends Application {
   constructor(shopApp, options = {}) {
     super(options);
     this.shopApp = shopApp;
-    this._discountPercent = 100;
+    // Com mercador, o carrinho cobra o preço dele (e o jogador não o muda).
+    this._discountPercent = shopApp.mercador ? shopApp._buyPercent : 100;
     this._closed = false;
   }
 
@@ -2439,6 +2686,8 @@ class CartApplication extends Application {
       totalDisplay: totals.totalDisplay,
       discountPercent: this._discountPercent,
       hasItems: items.length > 0,
+      travaPrecos: !!this.shopApp.mercador && !game.user.isGM,
+      mercadorNome: this.shopApp.mercador?.name ?? null,
     };
   }
 
@@ -2465,7 +2714,7 @@ class CartApplication extends Application {
       const key = ev.currentTarget.dataset.key;
       const item = this.shopApp._cartItems.get(key);
       if (!item) return;
-      const value = Math.max(1, Number(ev.currentTarget.value) || 1);
+      const value = Math.min(item.estoque ?? Infinity, Math.max(1, Number(ev.currentTarget.value) || 1));
       item.qty = value;
       ev.currentTarget.value = value;
     });
@@ -2530,6 +2779,19 @@ class CartApplication extends Application {
 
     const { to: newTo, tp: newTp, tc: newTc, troco, pago } = debitarCarteira(wealth, costCopper);
 
+    // As fontes são carregadas ANTES do negócio: a última peça da prateleira
+    // do mercador deixa de existir assim que ele a entrega.
+    const fontes = new Map();
+    for (const item of items) {
+      if (item.isSpell) continue;
+      try { fontes.set(item.key, await fromUuid(item.uuid)); }
+      catch (e) { console.warn(`${MODULE_ID} | Não foi possível carregar item ${item.uuid}`, e); }
+    }
+
+    // Tudo ou nada com o mercador: se faltar uma peça, o carrinho fica como está.
+    const linhasMercador = items.filter(i => i.mercadorItemId).map(i => ({ itemId: i.mercadorItemId, qty: i.qty }));
+    if (!(await this.shopApp._negociarCompra(linhasMercador, costCopper))) return;
+
     const purchasedLines = [];
 
     for (const item of items) {
@@ -2557,29 +2819,10 @@ class CartApplication extends Application {
         continue;
       }
 
-      let sourceDoc;
-      try {
-        sourceDoc = await fromUuid(item.uuid);
-      } catch (e) {
-        console.warn(`${MODULE_ID} | Não foi possível carregar item ${item.uuid}`, e);
-        continue;
-      }
+      const sourceDoc = fontes.get(item.key);
       if (!sourceDoc) continue;
 
-      const existing = this.shopApp.actor.items.find(i => {
-        if (i.getFlag(MODULE_ID, 'aprimoramentos')) return false; // item aprimorado não empilha
-        const flag = i.getFlag(MODULE_ID, 'sourceUuid');
-        return flag === item.uuid || i.name === sourceDoc.name;
-      });
-
-      if (existing && existing.system?.qtd !== undefined) {
-        await existing.update({ 'system.qtd': (existing.system.qtd ?? 0) + item.qty });
-      } else {
-        const itemData = sourceDoc.toObject();
-        itemData.system.qtd = item.qty;
-        const [created] = await this.shopApp.actor.createEmbeddedDocuments('Item', [itemData]);
-        if (created) await created.setFlag(MODULE_ID, 'sourceUuid', item.uuid);
-      }
+      await this.shopApp._entregarItem(sourceDoc, item.origemUuid ?? item.uuid, item.qty, item.preco);
 
       purchasedLines.push({
         name: item.name,
@@ -2601,8 +2844,8 @@ class CartApplication extends Application {
       const messageContent = cartaoLoja({
         icone: 'fa-shopping-cart',
         titulo: this._discountPercent === 100
-          ? 'finalizou a compra'
-          : `finalizou a compra (${this._discountPercent}% do preço)`,
+          ? `finalizou a compra ${this.shopApp._onde()}`
+          : `finalizou a compra ${this.shopApp._onde()} (${this._discountPercent}% do preço)`,
         ator: this.shopApp.actor.name,
         corpo: `
           ${linhas}

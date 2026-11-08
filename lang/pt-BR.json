@@ -11,12 +11,17 @@
       "IncludeSystem": "Incluir Compêndios do Sistema",
       "IncludeSystemHint": "Inclui automaticamente todos os compêndios de itens do sistema Tormenta20.",
       "IncludeWorld": "Incluir Itens do Mundo",
-  "IncludeWorldHint": "Inclui itens cadastrados no mundo (sidebar > Itens)."
+      "IncludeWorldHint": "Inclui itens cadastrados no mundo (sidebar > Itens)."
     },
     "Buy": "Comprar",
     "Reload": "Recarregar itens",
     "NoItems": "Nenhum item encontrado.",
     "NotEnough": "Sem moedas suficientes",
     "Purchased": "comprou"
+  },
+  "TYPES": {
+    "Actor": {
+      "t20-hayd-loja.mercador": "Mercador"
+    }
   }
 }

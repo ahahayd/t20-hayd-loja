@@ -6,6 +6,8 @@
 import './hayd-ui-base.mjs';
 import { ShopApplication, warmShopItemsCache, invalidateShopItemsCache, moedasChips, cartaoLoja, linhaCartao, atorUsaPlatina } from './shop-app.js';
 import { ShopSettingsApplication } from './settings-app.js';
+import { registrarTipoMercador } from './mercador-app.js';
+import { registrarSocketMercador, mercadorMirado, ehMercador, lojaAberta, mercadoresDisponiveis, COMUNIDADES } from './mercador.mjs';
 
 export const MODULE_ID = 't20-hayd-loja';
 
@@ -324,6 +326,7 @@ export function ajustarContrasteLoja(el) {
 ───────────────────────────────────────────── */
 Hooks.once('init', () => {
   console.log(`${MODULE_ID} | Inicializando módulo Tormenta20 Loja`);
+  registrarTipoMercador();
 
   /* Linhas da tabela da loja: partial usado tanto no render completo quanto
    * na paginação por scroll (que injeta só as linhas novas no tbody). */
@@ -479,6 +482,17 @@ Hooks.once('init', () => {
     default: false
   });
 
+  // Campanhas de escassez: jogadores só compram de mercadores (o mestre sempre vê tudo)
+  game.settings.register(MODULE_ID, 'lojaGeral', {
+    name: 'Loja geral disponível para jogadores',
+    hint: 'Desmarcado, jogadores só compram e vendem com mercadores (atores do tipo Mercador, com estoque e caixa próprios). Bom para campanhas de escassez.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => rerenderJanelasLoja(),
+  });
+
   game.settings.register(MODULE_ID, 'monitorAllMoneyChanges', {
     name: 'Monitorar mudanças de moedas em todos os casos',
     hint: 'Registra no chat mudanças de moedas mesmo quando mestres ou macros alteram o dinheiro.',
@@ -517,27 +531,157 @@ Hooks.once('init', () => {
   });
 });
 
+/* ─────────────────────────────────────────────
+   Configurações do módulo em categorias
+   ─────────────────────────────────────────────
+   O Foundry lista tudo solto (os menus primeiro). Aqui as entradas já
+   desenhadas são reagrupadas sob títulos; o que o usuário não vê (as de
+   mundo, para um jogador) simplesmente não aparece, e categoria vazia some.
+───────────────────────────────────────────── */
+const CATEGORIAS_CONFIG = [
+  { rotulo: 'Catálogo da loja', icone: 'fa-boxes-stacked', chaves: ['shopSettingsMenu', 'includeSystemPacks', 'includeWorldItems'] },
+  { rotulo: 'Mercadores', icone: 'fa-shop', chaves: ['lojaGeral'] },
+  { rotulo: 'Moedas e troco', icone: 'fa-coins', chaves: ['trocoRealista', 'limiarTrocoTO'] },
+  { rotulo: 'Construção', icone: 'fa-hammer', chaves: ['construcaoDiasNoMes', 'construcaoHorasPorDia'] },
+  { rotulo: 'Chat e registro de moedas', icone: 'fa-comment-dots', chaves: ['enableChatMessages', 'whisperChatMessages', 'monitorPlayerMoneyChanges', 'monitorAllMoneyChanges'] },
+];
+
+function grupoDaConfiguracao(root, chave) {
+  const id = CSS.escape(`${MODULE_ID}.${chave}`);
+  const alvo = root.querySelector(`[name="${id}"], button[data-key="${id}"]`);
+  return alvo?.closest('.form-group') ?? null;
+}
+
+Hooks.on('renderSettingsConfig', (app, html) => {
+  const root = html instanceof HTMLElement ? html : (html?.[0] ?? app.element?.[0] ?? app.element);
+  if (!root?.querySelector || root.querySelector('.t20-loja-cfg-titulo')) return;
+  const grupos = CATEGORIAS_CONFIG
+    .map(cat => ({ cat, itens: cat.chaves.map(c => grupoDaConfiguracao(root, c)).filter(Boolean) }))
+    .filter(g => g.itens.length);
+  if (!grupos.length) return;
+  // Insere no lugar do primeiro item do módulo, mantendo a seção dele.
+  const container = grupos[0].itens[0].parentElement;
+  const ancora = document.createComment('t20-loja');
+  const primeiro = [...container.children].find(el => grupos.some(g => g.itens.includes(el)));
+  container.insertBefore(ancora, primeiro);
+  for (const { cat, itens } of grupos) {
+    const titulo = document.createElement('h3');
+    titulo.className = 't20-loja-cfg-titulo';
+    titulo.innerHTML = `<i class="fa-solid ${cat.icone}"></i> ${cat.rotulo}`;
+    container.insertBefore(titulo, ancora);
+    for (const el of itens) container.insertBefore(el, ancora);
+  }
+  ancora.remove();
+});
+
 /** Mesmo ator que o botão da ficha usaria: token controlado ou personagem
  * atribuído ao usuário, desde que tenha sistema de dinheiro (jogável). */
 function actorParaAtalhoDaLoja() {
   for (const token of canvas?.tokens?.controlled ?? []) {
-    if (token.actor?.system?.dinheiro) return token.actor;
+    if (token.actor?.system?.dinheiro && !ehMercador(token.actor)) return token.actor;
   }
   const personagem = game.user?.character;
   if (personagem?.system?.dinheiro) return personagem;
   return null;
 }
 
-/** Abre a loja para o ator, reaproveitando a janela já aberta (se houver). */
-function abrirLojaPara(actor) {
+/** Abre (ou traz para a frente) a vitrine do ator, no mercador pedido ou na loja geral. */
+function abrirVitrine(actor, mercadorId = null) {
   const existing = Object.values(ui.windows).find(
     w => w instanceof ShopApplication && w.actor.id === actor.id
   );
   if (existing) {
+    if ((existing._mercadorId ?? null) !== mercadorId) {
+      existing._escolherMercador(mercadorId);
+      existing.render();
+    }
     existing.bringToTop();
   } else {
-    new ShopApplication(actor).render(true);
+    new ShopApplication(actor, { mercadorId }).render(true);
   }
+}
+
+/** A loja geral está liberada para este usuário? */
+function lojaGeralLiberada() {
+  if (game.user.isGM) return true;
+  try { return game.settings.get(MODULE_ID, 'lojaGeral') !== false; }
+  catch { return true; }
+}
+
+/**
+ * "Loja": pergunta de quem comprar quando há mais de uma loja à mão (a
+ * geral e os mercadores da cena ou sempre à mostra). Com uma só, abre
+ * direto. Mirando o token de um mercador, abre nele sem perguntar.
+ */
+function abrirLojaPara(actor) {
+  const mirado = mercadorMirado();
+  if (mirado) return abrirVitrine(actor, mirado.id);
+
+  const geral = lojaGeralLiberada();
+  const mercadores = mercadoresDisponiveis();
+  const opcoes = [
+    ...(geral ? [{ id: null }] : []),
+    ...mercadores.map(m => ({ id: m.ator.id })),
+  ];
+  if (opcoes.length === 0) {
+    ui.notifications.warn('Nenhum mercador por perto. Nesta campanha só se compra de mercadores.');
+    return;
+  }
+  if (opcoes.length === 1) return abrirVitrine(actor, opcoes[0].id);
+  escolherLoja(actor, geral, mercadores);
+}
+
+/** Diálogo de escolha da loja: um cartão por loja. */
+function escolherLoja(actor, geral, mercadores) {
+  const esc = foundry.utils.escapeHTML;
+  const aberta = Object.values(ui.windows).find(w => w instanceof ShopApplication && w.actor.id === actor.id);
+  const atual = aberta ? (aberta._mercadorId ?? '') : undefined;
+
+  const cartao = ({ id, img, icone, nome, detalhe }) => `
+    <button type="button" class="t20-loja-escolha-cartao${atual === id ? ' atual' : ''}" data-mercador="${id}">
+      ${img ? `<img src="${esc(img)}" alt="">` : `<span class="t20-loja-escolha-icone"><i class="fa-solid ${icone}"></i></span>`}
+      <span class="t20-loja-escolha-texto"><b>${esc(nome)}</b><small>${detalhe}</small></span>
+      ${atual === id ? '<span class="t20-loja-escolha-marca">aberta</span>' : ''}
+    </button>`;
+
+  const cartoes = [];
+  if (geral) cartoes.push(cartao({ id: '', icone: 'fa-store', nome: 'Loja geral', detalhe: 'Catálogo completo, sem limite de estoque' }));
+  for (const { ator, naCena, sempreAMostra } of mercadores) {
+    const com = COMUNIDADES[lojaAberta(ator)?.comunidade]?.rotulo;
+    const onde = naCena ? '<i class="fa-solid fa-location-dot"></i> Nesta cena' : (sempreAMostra ? 'Sempre à mostra' : 'Fora da cena');
+    cartoes.push(cartao({ id: ator.id, img: ator.img, nome: ator.name, detalhe: [onde, com].filter(Boolean).join(' · ') }));
+  }
+
+  const dialogo = new Dialog({
+    title: `Loja — ${actor.name}`,
+    content: `<div class="t20-loja-escolha"><p class="t20-loja-escolha-pergunta">De quem você quer comprar?</p><div class="t20-loja-escolha-lista">${cartoes.join('')}</div></div>`,
+    buttons: {},
+    render: html => {
+      html.find('[data-mercador]').on('click', ev => {
+        const id = ev.currentTarget.dataset.mercador || null;
+        dialogo.close();
+        abrirVitrine(actor, id);
+      });
+    },
+  }, { width: 420, classes: ['dialog', 't20-loja-escolha-janela'] });
+  dialogo.render(true);
+}
+
+/**
+ * Abre a loja de um mercador para quem a pediu (dois cliques no ator ou no
+ * token de um Mercador de quem o usuário não é dono, ou "Ver loja" na ficha).
+ */
+export function abrirLojaDoMercador(mercador) {
+  if (!lojaAberta(mercador)) {
+    ui.notifications.warn(`${mercador.name} está com a loja fechada.`);
+    return;
+  }
+  const comprador = actorParaAtalhoDaLoja();
+  if (!comprador) {
+    ui.notifications.warn('Selecione um token ou tenha um personagem atribuído para comprar.');
+    return;
+  }
+  abrirVitrine(comprador, mercador.id);
 }
 
 /* ─────────────────────────────────────────────
@@ -561,6 +705,7 @@ async function adicionarCompendiosAutomaticos() {
 }
 
 Hooks.once('ready', async () => {
+  registrarSocketMercador();
   try { await adicionarCompendiosAutomaticos(); }
   catch (err) { console.warn(`${MODULE_ID} | Falha ao detectar compêndios de módulos`, err); }
   // Não bloqueia o carregamento do mundo: aquece o cache em segundo plano
@@ -591,8 +736,9 @@ Hooks.on('deleteItem', onWorldItemChange);
 Hooks.on('renderActorSheet', (app, html, _data) => {
   const actor = app.actor;
 
-  // Só adiciona para atores com sistema de dinheiro (personagens jogáveis)
-  if (!actor?.system?.dinheiro) return;
+  // Só adiciona para atores com sistema de dinheiro (personagens jogáveis).
+  // O Mercador também tem dinheiro (o caixa), mas é a loja, não um freguês.
+  if (!actor?.system?.dinheiro || ehMercador(actor)) return;
 
   // Observadores/limitados não podem comprar pela ficha: só o dono (ou o GM) vê a loja
   if (!actor.isOwner) return;
@@ -630,6 +776,7 @@ Hooks.on('renderActorSheet', (app, html, _data) => {
 
   // Evita duplicar o botão em re-renders
   const janela = html.closest('.app');
+
   if (janela.find('.t20-loja-btn').length > 0) return;
 
   const btn = $(`

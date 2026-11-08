@@ -28,14 +28,41 @@
     <span class="wealth-coin copper">{{wealth.tc}} <abbr title="Tibar de Cobre">TC</abbr></span>
     <span class="wealth-total">(= {{wealth.totalSilver}} TP total)</span>
     {{#unless construcao}}
+    {{#if mostraSuperiores}}
     <button type="button" class="btn-open-upgrade" title="Aprimorar um item do inventário ou comprar um item superior/encantado">
       <i class="fas fa-hammer-crash"></i> Itens Superiores e Encantados
     </button>
+    {{/if}}
     <button type="button" class="btn-open-cart" title="Abrir carrinho">
       <i class="fas fa-shopping-cart"></i>
     </button>
     {{/unless}}
   </div>
+
+  {{!-- ── Balcão: de quem se compra (loja geral ou um mercador) ── --}}
+  {{#if mostraBalcao}}
+  <div class="shop-balcao {{#if mercador}}com-mercador{{/if}}">
+    {{#if mercador}}
+      <img class="balcao-retrato" src="{{mercador.img}}" alt="">
+      <div class="balcao-texto">
+        <b>{{mercador.nome}}</b>
+        <span class="balcao-caixa">
+          Caixa {{#if mercador.caixaIlimitado}}<span class="t20l-coin t20l-vazio" title="Caixa ilimitado">∞</span>{{else}}{{{mercador.caixa}}}{{/if}}
+          {{#unless mercador.aceitaVenda}}<em>· não compra itens</em>{{/unless}}
+        </span>
+      </div>
+    {{else}}
+      <i class="fas fa-store-slash balcao-icone"></i>
+      <div class="balcao-texto">
+        <b>Nenhum mercador</b>
+        <span class="balcao-caixa">Nesta campanha só se compra de mercadores</span>
+      </div>
+    {{/if}}
+    {{#if podeConfigurar}}
+    <button type="button" class="btn-config-mercador" title="Abrir a ficha do mercador"><i class="fas fa-gear"></i></button>
+    {{/if}}
+  </div>
+  {{/if}}
 
   {{!-- ── Filtros ── --}}
   <div class="shop-filters">
@@ -96,10 +123,10 @@
         {{#unless construcao}}
         <div class="filter-group sell-percent-group buy-percent-group">
           <label>Preço</label>
-          <button type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
-          <input type="range" class="shop-buy-percent" min="0" max="200" step="1" value="{{buyPercent}}">
-          <button type="button" class="pct-step buy-pct-step" data-step="10" title="+10%">+10</button>
-          <input type="number" class="shop-buy-percent-input" min="0" max="200" step="1" value="{{buyPercent}}">
+          <button {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="button" class="pct-step buy-pct-step" data-step="-10" title="−10%">−10</button>
+          <input {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="range" class="shop-buy-percent" min="0" max="200" step="1" value="{{buyPercent}}">
+          <button {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="button" class="pct-step buy-pct-step" data-step="10" title="+10%">+10</button>
+          <input {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="number" class="shop-buy-percent-input" min="0" max="200" step="1" value="{{buyPercent}}">
           <span class="sell-percent-label">%</span>
         </div>
         {{/unless}}
@@ -110,10 +137,10 @@
       <div class="shop-filters-row shop-filters-row-options">
         <div class="filter-group sell-percent-group">
           <label>Venda</label>
-          <button type="button" class="pct-step sell-pct-step" data-step="-10" title="−10%">−10</button>
-          <input type="range" class="shop-sell-percent" min="1" max="100" step="1" value="{{sellPercent}}">
-          <button type="button" class="pct-step sell-pct-step" data-step="10" title="+10%">+10</button>
-          <input type="number" class="shop-sell-percent-input" min="1" max="100" step="1" value="{{sellPercent}}">
+          <button {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="button" class="pct-step sell-pct-step" data-step="-10" title="−10%">−10</button>
+          <input {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="range" class="shop-sell-percent" min="1" max="100" step="1" value="{{sellPercent}}">
+          <button {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="button" class="pct-step sell-pct-step" data-step="10" title="+10%">+10</button>
+          <input {{#if travaPrecos}}disabled title="O mercador define o preço." {{/if}}type="number" class="shop-sell-percent-input" min="1" max="100" step="1" value="{{sellPercent}}">
           <span class="sell-percent-label">%</span>
         </div>
       </div>
@@ -319,8 +346,16 @@
     {{else}}
       <div class="shop-empty">
         <i class="fas fa-store-slash fa-3x"></i>
+        {{#if semLoja}}
+        <p>Nenhum mercador por perto.</p>
+        <p class="hint">Nesta campanha só se compra de mercadores. Quando houver um na cena, ele aparece ao abrir a Loja.</p>
+        {{else if vazioMercador}}
+        <p>{{#if search}}{{mercador.nome}} não tem "<em>{{search}}</em>".{{else}}{{mercador.nome}} não tem nada à venda com estes filtros.{{/if}}</p>
+        <p class="hint">O mercador só vende o que tem na prateleira.</p>
+        {{else}}
         <p>Nenhum item encontrado{{#if search}} para "<em>{{search}}</em>"{{/if}}.</p>
         <p class="hint">Verifique os filtros ou configure os compêndios nas Configurações do Módulo.</p>
+        {{/if}}
       </div>
     {{/if}}
 

@@ -1,0 +1,135 @@
+{{!-- templates/mercador.hbs — Ficha do ator Mercador (só quem é dono vê) --}}
+<form class="t20g-cf mc-form" autocomplete="off">
+  <header class="mc-topo">
+    <img class="mc-retrato" src="{{ator.img}}" alt="" data-edit="img" title="Trocar retrato">
+    <div class="mc-topo-texto">
+      <input class="mc-nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome do mercador">
+      <span class="t20g-apoio">O inventário é o estoque; o dinheiro é o caixa.</span>
+    </div>
+    <button type="button" class="t20g-btn t20g-btn--fantasma mc-ver-loja" data-tooltip="Abre a loja deste mercador como os jogadores a veem."><i class="fa-solid fa-store"></i> Ver loja</button>
+    <label class="mc-chave" data-tooltip="Fechada, os jogadores não compram nem vendem com este mercador.">
+      <input type="checkbox" data-campo="ativo" {{checked cfg.ativo}}>
+      <span>Loja aberta</span>
+    </label>
+  </header>
+
+  <nav class="mc-abas" role="tablist">
+    <a class="item" data-tab="estoque"><i class="fa-solid fa-boxes-stacked"></i> Estoque</a>
+    <a class="item" data-tab="config"><i class="fa-solid fa-sliders"></i> Configuração</a>
+  </nav>
+
+  <div class="mc-conteudo {{#unless cfg.ativo}}mc-fechada{{/unless}}">
+    {{!-- ══ Estoque ══ --}}
+    <section class="tab mc-aba" data-tab="estoque">
+      <section class="t20g-cf-grupo">
+        <h3 class="t20g-rotulo"><i class="fa-solid fa-map-location-dot"></i> Comunidade <span class="t20g-cf-dica">— Livro Básico, p. 271</span></h3>
+        <div class="mc-comunidades" role="radiogroup">
+          {{#each comunidades}}
+          <button type="button" class="mc-comunidade {{#if ativa}}ativa{{/if}}" data-comunidade="{{chave}}" role="radio" aria-checked="{{#if ativa}}true{{else}}false{{/if}}">
+            <i class="fa-solid {{icone}}"></i>
+            <b>{{rotulo}}</b>
+            <small>{{populacao}}</small>
+          </button>
+          {{/each}}
+        </div>
+        <p class="mc-economia"><i class="fa-solid fa-scale-balanced"></i> <span><b>Economia.</b> {{def.economia}}</span><i class="fa-solid fa-circle-info mc-interpretacao" data-tooltip="<b>Interpretação do módulo, não regra do livro.</b><br>{{def.interpretacao}}<br>Tudo pode ser ajustado na aba Configuração." data-tooltip-direction="LEFT"></i></p>
+
+        <div class="mc-gerar-caixa">
+          <div class="mc-gerar-opcoes">
+            {{#if usaSortimento}}
+            <label class="mc-linha" data-tooltip="Quanto do catálogo de até T$ 50 o armazém tem. A aldeia não tem de tudo.">
+              <span>Variedade do armazém</span>
+              <input type="number" class="t20g-campo mc-num" data-gerar="sortimento" min="1" max="100" value="{{sortimento}}"><span class="t20g-apoio">%</span>
+            </label>
+            {{/if}}
+            <label class="mc-linha"><input type="checkbox" data-gerar="substituir" {{checked substituir}}><span>Substituir o estoque atual</span></label>
+            <label class="mc-linha"><input type="checkbox" data-gerar="rolarCaixa" {{checked rolarCaixa}}><span>Rolar o caixa ({{caixaFormula}})</span></label>
+          </div>
+          <button type="button" class="t20g-btn t20g-btn--primario mc-gerar"><i class="fa-solid fa-dice"></i> Gerar estoque de {{def.rotulo}}</button>
+        </div>
+      </section>
+
+      <section class="t20g-cf-grupo">
+        <h3 class="t20g-rotulo"><i class="fa-solid fa-boxes-stacked"></i> Na prateleira</h3>
+        <div class="mc-estoque">
+          <div class="mc-numero"><b>{{estoque.tipos}}</b><span>itens à venda</span></div>
+          <div class="mc-numero"><b>{{estoque.pecas}}</b><span>peças contadas</span></div>
+          <div class="mc-numero"><b>{{estoque.ilimitados}}</b><span>sem fim (∞)</span></div>
+          <div class="mc-estoque-acoes">
+            <button type="button" class="t20g-btn t20g-btn--fantasma mc-ilimitar" data-tooltip="Marca (ou desmarca) todo o estoque como sem fim. Bom para uma loja que nunca acaba de pão e corda." {{#unless estoque.tipos}}disabled{{/unless}}><i class="fa-solid fa-infinity"></i> Alternar ∞</button>
+          </div>
+        </div>
+
+        {{#if pecas.length}}
+        <input type="search" class="t20g-campo mc-filtro" placeholder="Filtrar o estoque…" value="{{filtro}}">
+        {{#if semPreco}}<p class="mc-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{semPreco}} item(ns) sem preço e fora do catálogo da loja: não aparecem na vitrine até ganharem um preço.</p>{{/if}}
+        <ol class="mc-itens">
+          {{#each pecas}}
+          <li class="mc-item {{#if zerado}}zerado{{/if}} {{#unless preco}}sem-preco{{/unless}}" data-item-id="{{id}}" data-busca="{{busca}}">
+            <img src="{{img}}" alt="" loading="lazy">
+            <a class="mc-item-nome mc-item-abrir" data-tooltip="Abrir o item">{{nome}}</a>
+            <span class="mc-item-preco">{{#if preco}}{{preco}}{{#if precoDoCatalogo}} <i class="fa-solid fa-book-open" data-tooltip="Preço do catálogo da loja: o item não tem preço próprio."></i>{{/if}}{{else}}<i class="fa-solid fa-triangle-exclamation"></i> sem preço{{/if}}</span>
+            {{#if ilimitado}}
+            <span class="mc-item-qtd mc-item-qtd--inf">∞</span>
+            {{else}}
+            <input type="number" class="t20g-campo mc-item-qtd" min="0" step="1" value="{{qtd}}" aria-label="Quantidade de {{nome}}">
+            {{/if}}
+            <button type="button" class="mc-icone mc-item-inf {{#if ilimitado}}ativo{{/if}}" data-tooltip="{{#if ilimitado}}Voltar a contar as peças{{else}}Estoque sem fim{{/if}}"><i class="fa-solid fa-infinity"></i></button>
+            <button type="button" class="mc-icone mc-item-apagar" data-tooltip="Tirar da prateleira"><i class="fa-solid fa-trash"></i></button>
+          </li>
+          {{/each}}
+        </ol>
+        {{else}}
+        <div class="mc-vazio">
+          <i class="fa-solid fa-box-open"></i>
+          <p>Prateleira vazia.</p>
+          <p class="t20g-apoio">Gere o estoque da comunidade acima, ou arraste itens (da loja, de compêndios ou da aba Itens) para esta ficha.</p>
+        </div>
+        {{/if}}
+      </section>
+    </section>
+
+    {{!-- ══ Configuração ══ --}}
+    <section class="tab mc-aba" data-tab="config">
+      <section class="t20g-cf-grupo">
+        <h3 class="t20g-rotulo"><i class="fa-solid fa-eye"></i> Quem encontra esta loja</h3>
+        <p class="t20g-apoio mc-dica">Ao clicar em "Loja", o jogador escolhe entre os mercadores que têm token na cena e os marcados abaixo. Dois cliques no mercador (na aba de atores ou no token) também abrem a loja dele.</p>
+        <label class="mc-linha"><input type="checkbox" data-campo="sempreAMostra" {{checked cfg.sempreAMostra}}><span>Loja sempre à mostra <span class="t20g-apoio">— aparece para escolher mesmo sem token na cena</span></span></label>
+      </section>
+
+      <section class="t20g-cf-grupo">
+        <h3 class="t20g-rotulo"><i class="fa-solid fa-scroll"></i> Encomendas</h3>
+        <label class="mc-linha"><input type="checkbox" data-campo="catalogo" {{checked cfg.catalogo.ativo}}><span>Aceita encomendas do catálogo geral</span></label>
+        <p class="t20g-apoio mc-dica">Além da prateleira, o mercador vende qualquer item do catálogo da loja dentro dos limites abaixo, sem contar estoque: é como se ele mandasse buscar. Desligado, ele só vende o que está na prateleira.</p>
+        <div class="mc-grade">
+          <label class="mc-linha">
+            <span>Preço máximo</span>
+            <span class="t20g-apoio">T$</span><input type="number" class="t20g-campo mc-num" data-campo="precoMax" min="0" step="1" value="{{precoMax}}" placeholder="sem teto">
+          </label>
+          <label class="mc-linha" data-tooltip="Armas exóticas, armas de fogo e itens alquímicos não entram nas encomendas: só existem se estiverem na prateleira."><input type="checkbox" data-campo="excluirRaros" {{checked cfg.catalogo.excluirRaros}}><span>Raros só pela prateleira</span></label>
+          <label class="mc-linha"><input type="checkbox" data-campo="magias" {{checked cfg.catalogo.magias}}><span>Poções e pergaminhos</span></label>
+          <label class="mc-linha"><input type="checkbox" data-campo="superiores" {{checked cfg.superiores}}><span>Itens superiores e encantados</span></label>
+        </div>
+      </section>
+
+      <section class="t20g-cf-grupo">
+        <h3 class="t20g-rotulo"><i class="fa-solid fa-coins"></i> Negócio</h3>
+        <div class="mc-caixa">
+          <span>Caixa</span>
+          <div class="mc-moedas">{{{caixa}}}</div>
+          <span class="t20g-apoio">= T$ {{caixaTP}}</span>
+          <label class="mc-linha mc-direita"><input type="checkbox" data-campo="caixaIlimitado" {{checked cfg.caixaIlimitado}}><span>Caixa ilimitado</span></label>
+        </div>
+        <div class="mc-grade">
+          <label class="mc-linha" data-tooltip="Quanto o personagem paga, em % do preço de tabela.">
+            <span>Vende a</span><input type="number" class="t20g-campo mc-num" data-campo="precoCompra" min="0" max="500" value="{{cfg.precoCompra}}"><span class="t20g-apoio">% do preço</span>
+          </label>
+          <label class="mc-linha" data-tooltip="Quanto o mercador paga pelo item que o personagem vende.">
+            <span>Compra a</span><input type="number" class="t20g-campo mc-num" data-campo="precoVenda" min="0" max="100" value="{{cfg.precoVenda}}"><span class="t20g-apoio">% do valor</span>
+          </label>
+          <label class="mc-linha"><input type="checkbox" data-campo="aceitaVenda" {{checked cfg.aceitaVenda}}><span>Compra itens dos personagens</span></label>
+        </div>
+      </section>
+    </section>
+  </div>
+</form>

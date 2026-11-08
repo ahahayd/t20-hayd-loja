@@ -1,15 +1,15 @@
 {{!-- templates/cart.hbs — Carrinho de compras --}}
 <div class="t20-loja-cart">
   <div class="cart-header">
-    <span><i class="fas fa-shopping-cart"></i> Carrinho</span>
-    <div class="cart-discount">
+    <span><i class="fas fa-shopping-cart"></i> Carrinho{{#if mercadorNome}} <small class="cart-mercador">· {{mercadorNome}}</small>{{/if}}</span>
+    <fieldset class="cart-discount" {{#if travaPrecos}}disabled title="O mercador define o preço."{{/if}}>
       <label>Preço</label>
       <button type="button" class="pct-step cart-pct-step" data-step="-10" title="−10%">−10</button>
       <input type="range" class="cart-discount-range" min="1" max="200" step="1" value="{{discountPercent}}">
       <button type="button" class="pct-step cart-pct-step" data-step="10" title="+10%">+10</button>
       <input type="number" class="cart-discount-input" min="1" max="200" step="1" value="{{discountPercent}}">
       <span class="cart-discount-label">%</span>
-    </div>
+    </fieldset>
   </div>
 
   <div class="cart-items-list">

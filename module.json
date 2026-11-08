@@ -1,7 +1,7 @@
 {
   "id": "t20-hayd-loja",
   "title": "T20 Hayd Loja",
-  "description": "<p>Loja integrada para o Tormenta20: um botão na ficha do personagem abre a vitrine com itens de compêndios, do mundo e individuais, com busca e filtros avançados. Compra com desconto automático de moedas (TC, T$, TO) e venda de itens do inventário com percentual configurável. Compatível com o tema do t20-hayd-ui.</p>",
+  "description": "Loja integrada para o Tormenta20: compre e venda itens direto da ficha, com desconto automático de moedas.",
   "version": "1.8.0",
   "compatibility": {
     "minimum": "13",
@@ -14,6 +14,12 @@
       "url": "https://github.com/ahahayd"
     }
   ],
+  "socket": true,
+  "documentTypes": {
+    "Actor": {
+      "mercador": {}
+    }
+  },
   "esmodules": [
     "scripts/main.js"
   ],
@@ -23,6 +29,9 @@
     },
     {
       "src": "styles/tenda.css"
+    },
+    {
+      "src": "styles/mercador.css"
     }
   ],
   "languages": [

@@ -23,9 +23,9 @@
  */
 
 const CLASSE = 'hayd-ui';
-const MARCADOR = '[class*="t20-loja-qty"], [class*="t20-loja-spell"], [class*="t20-loja-craft"], [class*="t20-loja-tema"], [class*="apr-"]';
+const MARCADOR = '[class*="t20-loja-qty"], [class*="t20-loja-spell"], [class*="t20-loja-craft"], [class*="t20-loja-tema"], [class*="t20-loja-escolha"], [class*="apr-"]';
 /** Janelas próprias do módulo, pelo nome da classe da aplicação. */
-const JANELAS_PROPRIAS = new Set(['AprimorarApplication', 'ConstrucaoApplication', 'ShopSettingsApplication']);
+const JANELAS_PROPRIAS = new Set(['AprimorarApplication', 'ConstrucaoApplication', 'ShopSettingsApplication', 'MercadorFicha']);
 
 function ehDialogo(app) {
   const V2 = foundry.applications?.api?.DialogV2;
