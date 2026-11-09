@@ -388,3 +388,22 @@
 }
 .t20-loja-cfg-titulo i { opacity: 0.7; }
 .hayd-ui.t20-loja-mercador .mc-economia > i.mc-interpretacao { margin-left: auto; color: var(--t20g-ink-3); cursor: help; }
+
+/* ── Balcão na linha de Comprar/Vender, antes da contagem ── */
+
+.shop-filters-row-top:has(.shop-balcao) .filter-count { margin-left: 0; }
+.shop-filters-row-top .shop-balcao.shop-balcao {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+/* Compacto: uma linha só, sem aumentar a altura da barra */
+.shop-filters-row-top .shop-balcao.shop-balcao { gap: 6px; }
+.shop-filters-row-top .shop-balcao .balcao-retrato { width: 22px; height: 22px; flex-basis: 22px; }
+.shop-filters-row-top .shop-balcao .balcao-icone { width: 22px; flex-basis: 22px; font-size: 1em; }
+.shop-filters-row-top .shop-balcao .balcao-texto { flex-direction: row; align-items: center; gap: 6px; }
+.shop-filters-row-top .shop-balcao .balcao-caixa { flex-wrap: nowrap; white-space: nowrap; }
+.shop-filters-row-top .shop-balcao .btn-config-mercador { width: 22px; flex-basis: 22px; height: 22px; line-height: 20px; font-size: 0.85em; }
+.shop-filters-row-top:has(.shop-balcao) .filter-count { padding-left: 8px; border-left: 1px solid rgba(128,128,128,0.4); }
