@@ -77,11 +77,25 @@ function comVariantes(mod) {
 let _catalogo;
 async function carregarCatalogo() {
   if (_catalogo !== undefined) return _catalogo;
-  try {
-    _catalogo = comVariantes(await import(`../../${ITENS_ID}/scripts/catalogo.mjs`));
-  } catch (err) {
-    console.debug(`${MODULE_ID} | Catálogo do ${ITENS_ID} indisponível`, err);
-    _catalogo = null;
+  // O caminho relativo falha quando os módulos são servidos de pastas
+  // versionadas ou de um CDN (The Forge, hospedagens): tenta também a
+  // rota absoluta e a pasta de onde o main.mjs do itens foi carregado.
+  const arquivo = `${ITENS_ID}/scripts/catalogo.mjs`;
+  const candidatos = [
+    new URL(`../../${arquivo}`, import.meta.url).href,
+    new URL(foundry.utils.getRoute(`modules/${arquivo}`), window.location.href).href,
+  ];
+  const script = [...document.querySelectorAll('script[src]')]
+    .find(s => s.src.includes(`/${ITENS_ID}/`) && s.src.includes('/scripts/main.mjs'));
+  if (script) candidatos.unshift(new URL('./catalogo.mjs', script.src).href);
+  _catalogo = null;
+  for (const url of [...new Set(candidatos)]) {
+    try {
+      _catalogo = comVariantes(await import(url));
+      break;
+    } catch (err) {
+      console.debug(`${MODULE_ID} | Catálogo do ${ITENS_ID} indisponível em ${url}`, err);
+    }
   }
   return _catalogo;
 }
