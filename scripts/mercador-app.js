@@ -22,7 +22,7 @@ import {
    Dados do ator
 ───────────────────────────────────────────── */
 
-const { NumberField, SchemaField, HTMLField } = foundry.data.fields;
+const { NumberField, SchemaField, HTMLField, StringField, ObjectField } = foundry.data.fields;
 const moeda = () => new NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
 
 /** O mercador só precisa de dinheiro (o caixa) e de uma descrição. */
@@ -31,6 +31,12 @@ export class MercadorDados extends foundry.abstract.TypeDataModel {
     return {
       dinheiro: new SchemaField({ tc: moeda(), tp: moeda(), to: moeda(), tl: moeda() }),
       descricao: new HTMLField({ required: false, blank: true, initial: '' }),
+      // O sistema T20 lê estes campos de qualquer ator (getRollData e o
+      // movimento do token), por exemplo ao abrir a configuração do token.
+      attributes: new SchemaField({
+        conjuracao: new StringField({ required: true, blank: true, initial: '' }),
+        movement: new ObjectField({ required: true, initial: {} }),
+      }),
     };
   }
 }
